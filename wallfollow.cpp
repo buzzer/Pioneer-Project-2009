@@ -4,7 +4,6 @@
 //
 #include <iostream>
 #include <libplayerc++/playerc++.h>
-//#include <ctime>
 
 using namespace PlayerCc;
 
@@ -47,30 +46,38 @@ const time_t MAXCOUNT = 5;
 // meas: range measurement in meters
 // minwalldist: wall follow distance in meters
 // turnrate: rotation rate
-double wallfollow (double meas, double minwalldist)
+double wallfollow (double minwalldist, StateType * previous_mode)
 {
     double turnrate=0;
-    int theta = 0;
+    const double WallLostDist = 3.0;
+    double DistLFov  = 0;
+    double DistL     = 0;
+    double DistLRear = 0;
+
+    DistLFov  = lp[(uint32_t)(LFOV/DEGSTEP)];
+    DistL     = lp[(uint32_t)(210/DEGSTEP)];
+    DistLRear = lp[(uint32_t)(239/DEGSTEP)];
 
     // do simple (left) wall following
-    turnrate = dtor(K_P * (meas - SHAPE_DIST - minwalldist));
+    turnrate = dtor(K_P * (DistLFov - SHAPE_DIST - minwalldist));
 
     // Normalize rate
     if (turnrate > dtor(TURN_RATE))
     {
       turnrate = dtor(TURN_RATE);
     }
+    *previous_mode = WALL_FOLLOWING;
 #ifdef DEBUG
-    std::cout << "Distance Left: " << meas << std::endl;
+    std::cout << "WALLFOLLOW" << std::endl;
 #endif
 
-    // Go straight if no wall is in distance (left and left front)
-    theta = MFOV + 90;
-    if (meas  >= 3.0                          &&
-        lp[(uint32_t)(theta/DEGSTEP)] >= 5.0  &&
-        lp[(uint32_t)(239/DEGSTEP)]   >= 3.0     )
+    // Go straight if no wall is in distance (front, left and left front)
+    if (DistLFov  >= WallLostDist  &&
+        DistL     >= WallLostDist  &&
+        DistLRear >= WallLostDist     )
     {
         turnrate = 0;
+        *previous_mode = WALL_SEARCHING;
 #ifdef DEBUG
         std::cout << "LOSTWALL" << std::endl;
 #endif
@@ -104,7 +111,7 @@ void pathplan ( double * speed,
                 double * right_min,
                 double * left_min,
                 bool   * escape_direction,
-                uint32_t * previous_mode)
+                StateType * previous_mode)
 {
     if ((*left_min < STOP_MINWALLDIST) ||
         (*right_min < STOP_MINWALLDIST)   )
@@ -117,6 +124,9 @@ void pathplan ( double * speed,
         *escape_direction = left_min < right_min;
         // change this so that we know we have chosen the escape direction
         *previous_mode = COLLISION_AVOIDANCE;
+#ifdef DEBUG
+        std::cout << "COLLISION_AVOIDANCE" << std::endl;
+#endif
       }
 
       if (*escape_direction) // right turn
@@ -127,10 +137,10 @@ void pathplan ( double * speed,
     else
     {
       *previous_mode = WALL_FOLLOWING;
-    }
 #ifdef DEBUG
-    std::cout << "mode: " << *previous_mode << std::endl;
+      std::cout << "WALL_FOLLOWING" << std::endl;
 #endif
+    }
 }
 
 double calcspeed (double mindist)
@@ -165,17 +175,11 @@ void checkrotate (double * turnrate)
 
     min_dist = scanCriticalArea();
 
-    //if (lp[0]   < SHAPE_DIST ||
-        //lp[240] < SHAPE_DIST   )
-    //{
-        //*turnrate = 0;
-    //}
     if (min_dist < SHAPE_DIST)
         *turnrate = 0;
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   double speed = VEL;
   double tmp_speed = VEL;
@@ -185,7 +189,7 @@ main(int argc, char *argv[])
   bool goalachieved     = FALSE;
   double left_min = LPMAX;
   double right_min = LPMAX;
-  uint32_t previous_mode = WALL_FOLLOWING;
+  StateType previous_mode = WALL_FOLLOWING;
 
   while (goalachieved == FALSE)
   {
@@ -195,12 +199,7 @@ main(int argc, char *argv[])
 
     // (Left) Wall following
     turnrate = tmp_turnrate =
-        wallfollow(lp[(uint32_t)(LFOV/DEGSTEP)], MINWALLDIST);
-
-#ifdef DEBUG
-    std::cout << "turnrate: " << turnrate << std::endl;
-    std::cout << "speed: " << speed << std::endl;
-#endif
+        wallfollow(MINWALLDIST, &previous_mode);
 
     // Scan FOV for Walls
     scanfov(&right_min, &left_min);
@@ -224,7 +223,7 @@ main(int argc, char *argv[])
     speed = (tmp_speed + speed) / 2;
 
     // Check if rotating is safe
-    checkrotate(&turnrate);
+    checkrotate(&tmp_turnrate);
 
     // Fusion of the vectors
     turnrate = (tmp_turnrate + turnrate) / 2;
