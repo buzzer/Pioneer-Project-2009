@@ -25,7 +25,7 @@ enum StateType
 // parameters
 const double VEL       = 0.3; // normal_advance_speed
 const double K_P       = 1000; // kp_wall_following SRO: TODO What's this?
-const double TURN_RATE = 30; // maximal_wall_following_turnrate
+const double TURN_RATE = 20; // maximal_wall_following_turnrate (deg per sec)
 const int    FOV       = 45; // collision_avoidance_fov
 const int    LSRANGE   = 240; // Range of the Laser sensor
 const int    LFOV      = LSRANGE/2 + FOV; // Left limit of the FOV
