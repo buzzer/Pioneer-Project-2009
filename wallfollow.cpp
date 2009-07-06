@@ -25,7 +25,7 @@ enum StateType
 // parameters
 const double VEL       = 0.3; // normal_advance_speed
 const double K_P       = 1000; // kp_wall_following SRO: TODO What's this?
-const double TURN_RATE = 20; // maximal_wall_following_turnrate (deg per sec)
+const double TURN_RATE = 30; // maximal_wall_following_turnrate (deg per sec)
 const int    FOV       = 45; // collision_avoidance_fov
 const int    LSRANGE   = 240; // Range of the Laser sensor
 const int    LFOV      = LSRANGE/2 + FOV; // Left limit of the FOV
@@ -67,7 +67,7 @@ double wallfollow (double minwalldist, StateType * previous_mode)
       turnrate = dtor(TURN_RATE);
     }
     *previous_mode = WALL_FOLLOWING;
-#ifdef DEBUG
+#ifdef DEBUG_OFF
     std::cout << "WALLFOLLOW" << std::endl;
 #endif
 
@@ -78,10 +78,16 @@ double wallfollow (double minwalldist, StateType * previous_mode)
     {
         turnrate = 0;
         *previous_mode = WALL_SEARCHING;
-#ifdef DEBUG
+#ifdef DEBUG_OFF
         std::cout << "LOSTWALL" << std::endl;
 #endif
     }
+#ifdef DEBUG
+    std::cout << std::fixed << "Relevant dist: " << \
+        (DistLFov - SHAPE_DIST - minwalldist) << std::endl;
+    std::cout << std::fixed << "Turnrate: " << \
+        turnrate << std::endl << std::endl;
+#endif
 
     return turnrate;
 }
@@ -124,7 +130,7 @@ void pathplan ( double * speed,
         *escape_direction = left_min < right_min;
         // change this so that we know we have chosen the escape direction
         *previous_mode = COLLISION_AVOIDANCE;
-#ifdef DEBUG
+#ifdef DEBUG_OFF
         std::cout << "COLLISION_AVOIDANCE" << std::endl;
 #endif
       }
@@ -137,7 +143,7 @@ void pathplan ( double * speed,
     else
     {
       *previous_mode = WALL_FOLLOWING;
-#ifdef DEBUG
+#ifdef DEBUG_OFF
       std::cout << "WALL_FOLLOWING" << std::endl;
 #endif
     }
@@ -191,6 +197,8 @@ int main(int argc, char *argv[])
   double right_min = LPMAX;
   StateType previous_mode = WALL_FOLLOWING;
 
+  std::cout.precision(2);
+
   while (goalachieved == FALSE)
   {
 
@@ -228,7 +236,7 @@ int main(int argc, char *argv[])
     // Fusion of the vectors
     turnrate = (tmp_turnrate + turnrate) / 2;
 
-#ifdef DEBUG
+#ifdef DEBUG_OFF
     std::cout << "turnrate: " << turnrate << std::endl;
     std::cout << "speed: " << speed << std::endl;
 #endif
