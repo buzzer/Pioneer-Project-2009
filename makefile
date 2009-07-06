@@ -39,8 +39,12 @@ distclean:: clean
 player:
 	player stage_local/simple.cfg
 
+playerp:
+	player stage_local/pioneer.cfg
+
 view:
-	playerv -p 6665 --position:0 --sonar:0 --laser:0
+	#playerv -p 6665 --position:0 --sonar:0 --laser:0
+	playerv -p 6665 --position:0 --laser:0
 
 run:
 	./${TARGET}
