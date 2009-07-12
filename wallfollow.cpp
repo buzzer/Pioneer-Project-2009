@@ -10,7 +10,7 @@ using namespace PlayerCc;
 // Global Robot proxy
 PlayerClient    robot("localhost");
 LaserProxy      lp(&robot,0);
-//SonarProxy      sp(&robot,0);
+SonarProxy      sp(&robot,0);
 Position2dProxy pp(&robot,0);
 
 #define DEBUG
@@ -59,6 +59,8 @@ double wallfollow (double minwalldist, StateType * previous_mode)
     DistLRear = lp[(uint32_t)(239/DEGSTEP)];
 
     // do simple (left) wall following
+    //  Take Sonars into account
+    DistLFov > sp[2] ? DistLFov=sp[2] : DistLFov;
     turnrate = dtor(K_P * (DistLFov - SHAPE_DIST - minwalldist));
 
     // Normalize rate
@@ -82,7 +84,7 @@ double wallfollow (double minwalldist, StateType * previous_mode)
         std::cout << "LOSTWALL" << std::endl;
 #endif
     }
-#ifdef DEBUG
+#ifdef DEBUG_OFF
     std::cout << std::fixed << "Relevant dist: " << \
         (DistLFov - SHAPE_DIST - minwalldist) << std::endl;
     std::cout << std::fixed << "Turnrate: " << \
@@ -108,6 +110,11 @@ void scanfov (double * right_min, double * left_min)
         *left_min  = min(*left_min, lp[(uint32_t)(theta/DEGSTEP)]);
       }
     }
+    // Get 2 front sonars into account
+    *left_min > sp[3] ? *left_min=sp[3] : *left_min;
+    *right_min > sp[4] ? *left_min=sp[4] : *right_min;
+
+    // Correct obstacles distances by robot shape (circle)
     *left_min -= SHAPE_DIST;
     *right_min -= SHAPE_DIST;
 }
@@ -204,6 +211,13 @@ int main(int argc, char *argv[])
 
     // Read from the proxies
     robot.Read();
+#ifdef DEBUG
+    std::cout << std::endl;
+    for(int i=0; i< 16; i++)
+    {
+      std::cout << "Sonar " << i << ": " << sp[i] << std::endl;
+    }
+#endif
 
     // (Left) Wall following
     turnrate = tmp_turnrate =
