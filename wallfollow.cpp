@@ -178,6 +178,11 @@ double scanCriticalArea( void )
     {
         min_dist = min(min_dist, lp[(uint32_t)(theta/DEGSTEP)]);
     }
+    // Check Sonars
+    if(min_dist > min(sp[9], sp[14]))
+    {
+      min_dist = min(sp[9], sp[14]);
+    }
 
     return min_dist;
 }
