@@ -19,7 +19,7 @@ INC     = -I/opt/local/include/player-2.0 \
 
 TAGSRCS = /informatik/isr/tams/playerstage2.1.0rc1 stage_local
 
-CFLAGS  = -g     \
+CFLAGS  = -pg    \
           -Wall  \
           -O2    \
           `pkg-config --cflags playerc++`
