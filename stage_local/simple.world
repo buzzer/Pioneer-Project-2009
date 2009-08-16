@@ -53,3 +53,14 @@ pioneer2dx
   watchdog_timeout -1.0
 )
 
+# create a 2nd robot
+pioneer2dx
+(
+  name "robot2"
+  color "blue"
+  pose [-6 -6 45]
+#  sick_laser()
+  urg_laser()
+  watchdog_timeout -1.0
+)
+

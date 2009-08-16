@@ -8,10 +8,10 @@
 using namespace PlayerCc;
 
 // Global Robot proxy
-PlayerClient    robot1("localhost", 6665);
-LaserProxy      lp(&robot1,0);
-SonarProxy      sp(&robot1,0);
-Position2dProxy pp(&robot1,0);
+PlayerClient    robot2("localhost", 6666);
+LaserProxy      lp(&robot2,0);
+SonarProxy      sp(&robot2,0);
+Position2dProxy pp(&robot2,0);
 
 #define DEBUG
 
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
   {
 
     // Read from the proxies
-    robot1.Read();
+    robot2.Read();
 #ifdef DEBUG
     std::cout << std::endl;
     for(int i=0; i< 16; i++)
