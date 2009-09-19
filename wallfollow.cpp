@@ -13,7 +13,7 @@ LaserProxy      lp(&robot,0);
 SonarProxy      sp(&robot,0);
 Position2dProxy pp(&robot,0);
 
-#define DEBUG
+#define DEBUG_NO
 
 enum StateType
 {

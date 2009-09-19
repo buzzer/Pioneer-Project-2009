@@ -6,6 +6,6 @@ define urg_laser laser
   samples 682
 
   color "blue"
-  size [ 0.14 0.14 ]	
+  size [ 0.14 0.14 0.19 ]	
 )
 
