@@ -28,7 +28,8 @@ floorplan
 (
   size [16.000 16.000 0.800]
   pose [0 0 0 0]
-  bitmap "bitmaps/prb.png"
+#  bitmap "bitmaps/prb.png"
+  bitmap "bitmaps/tams_corr_orig_cut.png"
 )
 
 pioneer2dx
