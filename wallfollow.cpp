@@ -25,7 +25,9 @@ enum StateType
 // parameters
 const double VEL       = 0.3; // normal_advance_speed
 const double K_P       = 1000; // kp_wall_following SRO: TODO What's this?
-const double TURN_RATE = 30; // maximal_wall_following_turnrate (deg per sec)
+const double TURN_RATE = 40; // maximal_wall_following_turnrate (deg per sec)
+                             // low values: smoother trajectory but more
+                             // restricted
 const int    FOV       = 45; // collision_avoidance_fov
 const int    LSRANGE   = 240; // Range of the Laser sensor
 const int    LFOV      = LSRANGE/2 + FOV; // Left limit of the FOV
@@ -34,7 +36,10 @@ const int    MFOV      = LSRANGE/2; // Straight front FOV
 const double MINWALLDIST = 0.7; // preferred_wall_following_distance
 const double STOP_MINWALLDIST = 0.2; // stop_distance
 const double SHAPE_DIST = 0.3; // Min Radius from sensor for robot shape
-const double STOP_ROT  = 50; // stop_rotation_speed
+const double STOP_ROT  = 30; // stop_rotation_speed
+                            // low values increase manauverablility in narrow
+                            // edges, high values let the robot sometimes be
+                            // stuck
 const double DEGSTEP   = 360./1024.; // Degree per step
 // Laserpointer values
 const double LPMIN     = 0.02; // meters
