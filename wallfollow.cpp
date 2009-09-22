@@ -46,7 +46,6 @@ const double DEGSTEP   = 360./1024.; // Degree per step
 // Laserpointer values
 const double LPMIN     = 0.02; // meters
 const double LPMAX     = 5.0;  // meters
-const time_t MAXCOUNT  = 5;
 
 // Measure angle to left wall and give appropriate turnrate back
 inline double sonarTurnrate (double DistLFov)
@@ -91,7 +90,7 @@ inline double wallfollow (double minwalldist, StateType * previous_mode)
 
     //if (*previous_mode == WALL_FOLLOWING){
     // ~45 degrees to wall
-    if ( ( abs(sp[15] - sp[0]) < 0.2 )                &&
+    if ( ( std::abs(sp[15] - sp[0]) < 0.2 )                &&
          ( DistLFov < MINWALLDIST + SHAPE_DIST + 0.2)       &&
          ( DistLFov > STOP_MINWALLDIST + SHAPE_DIST ) &&
          ( DistFront > 1.0 + SHAPE_DIST)                )
@@ -108,7 +107,7 @@ inline double wallfollow (double minwalldist, StateType * previous_mode)
 #endif
 
     // Normalize turnrate
-    if(abs(turnrate)>dtor(TURN_RATE))
+    if(std::abs(turnrate)>dtor(TURN_RATE))
       turnrate<0 ? turnrate=-dtor(TURN_RATE) : turnrate=dtor(TURN_RATE);
 
     // Go straight if no wall is in distance (front, left and left front)

@@ -22,6 +22,16 @@ TAGSRCS = /informatik/isr/tams/playerstage2.1.0rc1 stage_local
 
 CFLAGS  = -pg    \
           -Wall  \
+					-Wcast-align\
+					-Waggregate-return \
+					-Wcast-qual\
+					-Wconversion\
+					-Wcomment\
+					-Wno-deprecated-declarations\
+					-Wdisabled-optimization\
+					-Wreturn-type -Wfatal-errors\
+					-Wmost\
+					-Wunused\
           -O2    \
           `pkg-config --cflags playerc++`
 LIBS    = `pkg-config --libs playerc++`
