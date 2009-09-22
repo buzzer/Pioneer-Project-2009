@@ -14,7 +14,7 @@ LaserProxy      lp(&robot,0);
 SonarProxy      sp(&robot,0);
 Position2dProxy pp(&robot,0);
 
-#define DEBUG_STATE_NO
+#define DEBUG_STATE
 #define DEBUG_LSONAR_NO
 
 enum StateType
@@ -37,7 +37,7 @@ const int    RFOV      = LSRANGE/2 - FOV; // Right limit of the FOV
 const int    MFOV      = LSRANGE/2; // Straight front FOV
 const double MINWALLDIST = 0.7; // preferred_wall_following_distance
 const double STOP_MINWALLDIST = 0.2; // stop_distance
-const double SHAPE_DIST = 0.3; // Min Radius from sensor for robot shape
+const double SHAPE_DIST = 0.4; // Min Radius from sensor for robot shape
 const double STOP_ROT  = 30; // stop_rotation_speed
                             // low values increase manauverablility in narrow
                             // edges, high values let the robot sometimes be
@@ -48,7 +48,7 @@ const double LPMIN     = 0.02; // meters
 const double LPMAX     = 5.0;  // meters
 
 // Measure angle to left wall and give appropriate turnrate back
-inline double sonarTurnrate (double DistLFov)
+inline double smoothTurnrate (double DistLFov)
 {
   double turnrate = 0;
 
@@ -71,7 +71,7 @@ inline double sonarTurnrate (double DistLFov)
 inline double wallfollow (double minwalldist, StateType * previous_mode)
 {
     double turnrate=0;
-    const double WallLostDist = 3.0;
+    const double WallLostDist = 1.5;
     double DistLFov  = 0;
     double DistL     = 0;
     double DistLRear = 0;
@@ -88,18 +88,19 @@ inline double wallfollow (double minwalldist, StateType * previous_mode)
     //  Take Sonars into account
     DistLFov>sp[2] ? DistLFov=sp[2] : DistLFov;
 
-    //if (*previous_mode == WALL_FOLLOWING){
-    // ~45 degrees to wall
-    if ( ( std::abs(sp[15] - sp[0]) < 0.2 )                &&
-         ( DistLFov < MINWALLDIST + SHAPE_DIST + 0.2)       &&
+    // Check conditions for smooth wall following
+    // up to ~45 degrees to wall
+    if ( ( std::abs(sp[15] - sp[0]) < 0.2 )           &&
+         ( DistLFov < MINWALLDIST + SHAPE_DIST + 0.2) &&
          ( DistLFov > STOP_MINWALLDIST + SHAPE_DIST ) &&
          ( DistFront > 1.0 + SHAPE_DIST)                )
     {
 #ifdef DEBUG_STATE
       std::cout << "OPTIMIZED FOLLOW\t" << DistLFov << std::endl;
 #endif
-      turnrate = sonarTurnrate(DistLFov);
+      turnrate = smoothTurnrate(DistLFov);
     } else {
+      // do naiv calculus for turnrate
       turnrate = dtor(K_P * (DistLFov - SHAPE_DIST - minwalldist));
     }
 #ifdef DEBUG_STATE
@@ -107,7 +108,7 @@ inline double wallfollow (double minwalldist, StateType * previous_mode)
 #endif
 
     // Normalize turnrate
-    if(std::abs(turnrate)>dtor(TURN_RATE))
+    if( std::abs(turnrate) > dtor(TURN_RATE) )
       turnrate<0 ? turnrate=-dtor(TURN_RATE) : turnrate=dtor(TURN_RATE);
 
     // Go straight if no wall is in distance (front, left and left front)
@@ -130,23 +131,17 @@ inline void scanfov (double * right_min, double * left_min)
     // Scan FOV for Walls
     for (int theta=RFOV; theta<LFOV; theta++)
     {
-      // Right side
-      if (theta < MFOV)
-      {
+      if (theta < MFOV) // Right side
         *right_min = min(*right_min, lp[(uint32_t)(theta/DEGSTEP)]);
-      }
-      // Left side
-      else
-      {
+      else              // Left side
         *left_min  = min(*left_min, lp[(uint32_t)(theta/DEGSTEP)]);
-      }
     }
     // Get 2 front sonars into account
-    *left_min > sp[3] ? *left_min=sp[3] : *left_min;
+    *left_min  > sp[3] ? *left_min=sp[3] : *left_min;
     *right_min > sp[4] ? *left_min=sp[4] : *right_min;
 
     // Correct obstacles distances by robot shape (circle)
-    *left_min -= SHAPE_DIST;
+    *left_min  -= SHAPE_DIST;
     *right_min -= SHAPE_DIST;
 }
 
@@ -154,7 +149,7 @@ inline void collisionAvoid ( double * speed,
                              double * turnrate,
                              double * right_min,
                              double * left_min,
-                             bool   * escape_direction,
+                             bool   * right_escape,
                              StateType * previous_mode)
 {
   // store mode before call
@@ -166,21 +161,21 @@ inline void collisionAvoid ( double * speed,
     *speed = 0;
     // selection of escape direction (done once for each object encounter)
     // go towards direction with most open space
-    *escape_direction = left_min < right_min;
+    *right_escape = left_min < right_min;
     // change this so that we know we have chosen the escape direction
     *previous_mode = COLLISION_AVOIDANCE;
 #ifdef DEBUG_STATE
     std::cout << "COLLISION_AVOIDANCE" << std::endl;
 #endif
 
-    if (*escape_direction) // right turn
-      *turnrate = dtor(STOP_ROT);
-    else // left turn
-      *turnrate = dtor(-STOP_ROT);
+    //if (*right_escape) // left turn
+      //*turnrate = dtor(STOP_ROT);
+    //else               // right turn
+      *turnrate = -dtor(STOP_ROT);
   }
 }
 
-double calcspeed (double mindist)
+inline double calcspeed (double mindist)
 {
     if (mindist < MINWALLDIST)
         return VEL * (mindist/MINWALLDIST);
@@ -188,6 +183,7 @@ double calcspeed (double mindist)
         return VEL;
 }
 
+//FIXME Is always critical
 inline double scanCriticalArea( void )
 {
     double min_dist = 0;
@@ -225,10 +221,10 @@ inline void checkrotate (double * turnrate)
 int main(int argc, char *argv[])
 {
   double speed = VEL;
-  double tmp_speed = VEL;
+  //double tmp_speed = VEL;
   double turnrate = 0;
   double tmp_turnrate = 0;
-  bool escape_direction = FALSE;
+  bool right_escape = FALSE;
   bool goalachieved     = FALSE;
   double left_min = LPMAX;
   double right_min = LPMAX;
@@ -248,29 +244,23 @@ int main(int argc, char *argv[])
 #endif
 
     // (Left) Wall following
-    turnrate = tmp_turnrate =
-        wallfollow(MINWALLDIST, &previous_mode);
+    turnrate = wallfollow(MINWALLDIST, &previous_mode);
 
     // Scan FOV for Walls
     scanfov(&right_min, &left_min);
 
-    // Decide what to do
-    collisionAvoid(&tmp_speed,
-                   &tmp_turnrate,
+    // Collision avoidance overrides wall follow turnrate if neccessary!
+    collisionAvoid(&speed,
+                   &turnrate,
                    &right_min,
                    &left_min,
-                   &escape_direction,
+                   &right_escape,
                    &previous_mode);
 
-    // Fusion of the vectors
-    speed = (tmp_speed + speed) / 2;
-    turnrate = (tmp_turnrate + turnrate) / 2;
-
     // Set speed dependend on the wall distance
-    tmp_speed = calcspeed(min(left_min, right_min));
-
-    // Fusion of the vectors
-    speed = (tmp_speed + speed) / 2;
+    // This overrides collision avoidances but!
+    // Nevertheless this conservative approach should be sufficient
+    speed = calcspeed(std::min(left_min, right_min));
 
     // Check if rotating is safe
     checkrotate(&tmp_turnrate);
