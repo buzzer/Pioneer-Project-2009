@@ -17,8 +17,8 @@ LaserProxy      lp(&robot,0);
 SonarProxy      sp(&robot,0);
 Position2dProxy pp(&robot,0);
 
-#define DEBUG// Has to be set if any debug output wanted !!!
-#define DEBUG_STATE
+#define DEBUG_NO// Has to be set if any debug output wanted !!!
+#define DEBUG_STATE_NO
 #define DEBUG_CRIT_NO
 #define DEBUG_SONAR_NO
 #define DEBUG_LSONAR_NO
@@ -55,6 +55,7 @@ const int    RFOV      = LSRANGE/2 - FOV; // Right limit of the FOV
 const int    MFOV      = LSRANGE/2; // Straight front FOV
 const double MINWALLDIST = 0.6; // preferred_wall_following_distance
 const double STOP_MINWALLDIST = 0.2; // stop_distance
+const double WALLLOSTDIST  = 1.5; // Wall attractor
 const double SHAPE_DIST = 0.25; // Min Radius from sensor for robot shape
 const double STOP_ROT  = 30; // stop_rotation_speed
                             // low values increase manauverablility in narrow
@@ -137,10 +138,9 @@ inline double getDistance( viewDirectType viewDirection )
 // meas: range measurement in meters
 // minwalldist: wall follow distance in meters
 // turnrate: rotation rate
-inline double wallfollow (double minwalldist, StateType * currentState)
+inline double wallfollow( StateType * currentState )
 {
-  double turnrate=0;
-  const double WallLostDist = 1.5;
+  double turnrate  = 0;
   double DistLFov  = 0;
   double DistL     = 0;
   double DistLRear = 0;
@@ -170,7 +170,7 @@ inline double wallfollow (double minwalldist, StateType * currentState)
     turnrate = smoothTurnrate(DistLFov);
   } else {
     // do naiv calculus for turnrate
-    turnrate = dtor(K_P * (DistLFov*cos(dtor(45)) - minwalldist));
+    turnrate = dtor(K_P * (DistLFov*cos(dtor(45)) - MINWALLDIST));
   }
 #ifdef DEBUG_STATE
   std::cout << "WALLFOLLOW" << std::endl;
@@ -181,9 +181,9 @@ inline double wallfollow (double minwalldist, StateType * currentState)
     turnrate<0 ? turnrate=-dtor(TURN_RATE) : turnrate=dtor(TURN_RATE);
 
   // Go straight if no wall is in distance (front, left and left front)
-  if (DistLFov  >= WallLostDist  &&
-      DistL     >= WallLostDist  &&
-      DistLRear >= WallLostDist     )
+  if (DistLFov  >= WALLLOSTDIST  &&
+      DistL     >= WALLLOSTDIST  &&
+      DistLRear >= WALLLOSTDIST     )
   {
     turnrate = 0;
     *currentState = WALL_SEARCHING;
@@ -215,17 +215,19 @@ inline void scanfov (double * right_min, double * left_min)
 }
 
 // Biased by left wall following
-inline void collisionAvoid ( double * speed,
-                             double * turnrate,
-                             double * right_min,
-                             double * left_min,
+inline void collisionAvoid ( double * turnrate,
                              StateType * currentState)
 {
-  if ((*left_min < STOP_MINWALLDIST) ||
-      (*right_min < STOP_MINWALLDIST)   )
+  double left_min = LPMAX;
+  double right_min = LPMAX;
+
+  // Scan FOV for Walls
+  scanfov(&right_min, &left_min);
+
+  if ((left_min < STOP_MINWALLDIST) ||
+      (right_min < STOP_MINWALLDIST)   )
   {
     *currentState = COLLISION_AVOIDANCE;
-    *speed = 0;
     // Turn right as long we want left wall following
     *turnrate = -dtor(STOP_ROT);
 #ifdef DEBUG_STATE
@@ -277,14 +279,11 @@ try {
   double speed = VEL;
   double turnrate = 0;
   double tmp_turnrate = 0;
-  bool goalachieved = FALSE;
-  double left_min = LPMAX;
-  double right_min = LPMAX;
   StateType currentState = WALL_FOLLOWING;
 
   std::cout.precision(2);
 
-  while (goalachieved == FALSE)
+  while (true)
   {
     // Read from the proxies
     robot.Read();
@@ -296,21 +295,13 @@ try {
 #endif
 
     // (Left) Wall following
-    turnrate = wallfollow(MINWALLDIST, &currentState);
-
-    // Scan FOV for Walls
-    scanfov(&right_min, &left_min);
+    turnrate = wallfollow(&currentState);
 
     // Collision avoidance overrides wall follow turnrate if neccessary!
-    collisionAvoid(&speed,
-                   &turnrate,
-                   &right_min,
-                   &left_min,
+    collisionAvoid(&turnrate,
                    &currentState);
 
     // Set speed dependend on the wall distance
-    // This overrides collision avoidances but!
-    // Nevertheless this conservative approach should be sufficient
     speed = calcspeed();
 
     // Check if rotating is safe
@@ -324,21 +315,18 @@ try {
       << currentState << std::endl;
 #endif
 #ifdef DEBUG_DIST
-    std::cout << "Dist (lf/f/rf/r/rb/b/lb/l):\t" << getDistance(LEFTFRONT) << "\t" <<
-      getDistance(FRONT)      << "\t" <<
-      getDistance(RIGHTFRONT) << "\t" <<
-      getDistance(RIGHT)      << "\t" <<
-      getDistance(RIGHTREAR)  << "\t" <<
-      getDistance(BACK)       << "\t" <<
-      getDistance(LEFTREAR)   << "\t" <<
-      getDistance(LEFT)       << std::endl;
+    std::cout << "Dist (l/lf/f/rf/r/rb/b/lb):\t" << getDistance(LEFT)
+      << getDistance(LEFTFRONT)  << "\t"
+      << getDistance(FRONT)      << "\t"
+      << getDistance(RIGHTFRONT) << "\t"
+      << getDistance(RIGHT)      << "\t"
+      << getDistance(RIGHTREAR)  << "\t"
+      << getDistance(BACK)       << "\t"
+      << getDistance(LEFTREAR)   << std::endl;
 #endif
 
     // Command the motors
     pp.SetSpeed(speed, turnrate);
-
-    // Reset distance values
-    left_min  = LPMAX; right_min = LPMAX;
   }
 
 } catch (PlayerCc::PlayerError e) {
