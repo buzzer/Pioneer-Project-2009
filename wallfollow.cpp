@@ -17,13 +17,13 @@ LaserProxy      lp(&robot,0);
 SonarProxy      sp(&robot,0);
 Position2dProxy pp(&robot,0);
 
-#define DEBUG_NO// Has to be set if any debug output wanted !!!
+#define DEBUG// Has to be set if any debug output wanted !!!
 #define DEBUG_STATE_NO
 #define DEBUG_CRIT_NO
 #define DEBUG_SONAR_NO
 #define DEBUG_LSONAR_NO
 #define DEBUG_LASER_NO
-#define DEBUG_DIST_NO
+#define DEBUG_DIST
 
 enum StateType {      // Current behaviour of the robot
   WALL_FOLLOWING,
@@ -31,6 +31,10 @@ enum StateType {      // Current behaviour of the robot
   WALL_SEARCHING
 };
 enum viewDirectType {   // Used for simple range area distinction
+  LEFT,
+  RIGHT,
+  FRONT,
+  BACK,
   LEFTFRONT,
   RIGHTFRONT,
   LEFTREAR,
@@ -78,6 +82,61 @@ inline double smoothTurnrate (double DistLFov)
   return turnrate;
 }
 
+// TODO consider median or mean for more robust laser range
+// Returns minimum distance of requested viewDirection
+// Robot shape shall be considered here !
+// NOTE: ALL might be slow due recursion, use it only for debugging!
+inline double criticalDist( viewDirectType viewDirection )
+{
+  double LfMinDist = LPMAX;
+  double RfMinDist = LPMAX;
+
+  // Scan safety areas for walls
+  switch (viewDirection) {
+    case LEFT      : {
+                       for (int theta=205; theta<215; theta++) // Check small laser range
+                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
+                       LfMinDist -= SHAPE_DIST;
+                       return std::min(LfMinDist, std::min(sp[0], sp[15])); // Check also sonar
+                     }
+    case RIGHT     : {
+                       for (int theta=25; theta<35; theta++) // Check small laser range
+                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
+                       LfMinDist -= SHAPE_DIST;
+                       return std::min(LfMinDist, std::min(sp[7], sp[8])); // Check also sonar
+                     }
+    case FRONT     : {
+                       for (int theta=115; theta<125; theta++) // Check small laser range
+                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
+                       LfMinDist -= SHAPE_DIST;
+                       return std::min(LfMinDist, std::min(sp[3], sp[4])); // Check also sonar
+                     }
+    case RIGHTFRONT: {
+                       for (int theta=70; theta<80; theta++) // Check small laser range
+                         RfMinDist = std::min(RfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
+                       RfMinDist -= SHAPE_DIST;
+                       return std::min(RfMinDist, std::min(sp[5], sp[6])); // Check also sonar
+                     }
+    case LEFTFRONT : {
+                       for (int theta=160; theta<170; theta++) // Check small laser range
+                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
+                       LfMinDist -= SHAPE_DIST;
+                       return std::min(LfMinDist, std::min(sp[1], sp[2])); // Check also sonar
+                     }
+    case BACK      : return std::min(sp[11], sp[12]); // Sorry, only sonar at rear
+    case LEFTREAR  : return sp[14]; // Sorry, only sonar at rear
+    case RIGHTREAR : return sp[9];  // Sorry, only sonar at rear
+    case ALL       : return std::min(criticalDist(LEFT),
+                             std::min(criticalDist(RIGHT),
+                               std::min(criticalDist(FRONT),
+                                 std::min(criticalDist(BACK),
+                                   std::min(criticalDist(RIGHTFRONT),
+                                     std::min(criticalDist(LEFTFRONT),
+                                       std::min(criticalDist(LEFTREAR), criticalDist(RIGHTREAR) )))))));
+    default: return 0.; // Should be recognized if happens
+  }
+}
+
 // Calculates the turnrate from range measurement and minimum wall follow
 // distance
 // meas: range measurement in meters
@@ -96,21 +155,28 @@ inline double wallfollow (double minwalldist, StateType * currentState)
   // Will potentially be overridden by higher prior behaviours
   *currentState = WALL_FOLLOWING;
 
-  DistLFov  = lp[(uint32_t)(LFOV/DEGSTEP)];
-  DistL     = lp[(uint32_t)(210/DEGSTEP)];
-  DistLRear = lp[(uint32_t)(239/DEGSTEP)];
-  DistFront = lp[(uint32_t)(MFOV/DEGSTEP)];
+  //DistLFov  = lp[(uint32_t)(LFOV/DEGSTEP)];
+  //DistL     = lp[(uint32_t)(210/DEGSTEP)];
+  //DistLRear = lp[(uint32_t)(239/DEGSTEP)];
+  //DistFront = lp[(uint32_t)(MFOV/DEGSTEP)];
+  DistLFov  = criticalDist(LEFTFRONT);
+  DistL     = criticalDist(LEFT);
+  DistLRear = criticalDist(LEFTREAR);
+  DistFront = criticalDist(FRONT);
 
   // do simple (left) wall following
   //  Take Sonars into account
-  DistLFov>sp[2] ? DistLFov=sp[2] : DistLFov;
+  //DistLFov>sp[2] ? DistLFov=sp[2] : DistLFov;
 
   // Check conditions for smooth wall following
   // up to ~45 degrees to wall
   if ( ( std::abs(sp[15] - sp[0]) < 0.2 )          &&
-      ( DistLFov < MINWALLDIST + SHAPE_DIST + 0.2) &&
-      ( DistLFov > STOP_MINWALLDIST + SHAPE_DIST ) &&
-      ( DistFront > 1.0 + SHAPE_DIST)                )
+      //( DistLFov < MINWALLDIST + SHAPE_DIST + 0.2) &&
+      //( DistLFov > STOP_MINWALLDIST + SHAPE_DIST ) &&
+      //( DistFront > 1.0 + SHAPE_DIST)                )
+      ( DistLFov < MINWALLDIST + 0.2) &&
+      ( DistLFov > STOP_MINWALLDIST ) &&
+      ( DistFront > 1.0 )                )
   {
 #ifdef DEBUG_STATE
     std::cout << "OPTIMIZED FOLLOW\t" << DistLFov << std::endl;
@@ -182,46 +248,15 @@ inline void collisionAvoid ( double * speed,
   }
 }
 
-// TODO consider median or mean for more robust laser range
-// Returns minimum distance of requested viewDirection
-// Robot shape shall be considered here !
-inline double criticalDist( viewDirectType viewDirection )
-{
-  double LfMinDist = LPMAX;
-  double RfMinDist = LPMAX;
-
-  // Scan safety areas for walls
-  switch (viewDirection) {
-    case RIGHTFRONT: {
-                       for (int theta=60; theta<75; theta++) // Check small laser range
-                         RfMinDist = std::min(RfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
-                       RfMinDist -= SHAPE_DIST;
-                       return std::min(RfMinDist, sp[6]); // Check also sonar
-                     }
-    case LEFTFRONT : {
-                       for (int theta=165; theta<180; theta++) // Check small laser range
-                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
-                       LfMinDist -= SHAPE_DIST;
-                       return std::min(LfMinDist, sp[1]); // Check also sonar
-                     }
-    case LEFTREAR  : return sp[14]; // Sorry, only sonar at rear
-    case RIGHTREAR : return sp[9];  // Sorry, only sonar at rear
-    case ALL       : return std::min(criticalDist(RIGHTFRONT),
-                               std::min(criticalDist(LEFTFRONT),
-                                 std::min(criticalDist(LEFTREAR), criticalDist(RIGHTREAR) )));
-    default: return 0.; // Should be recognized if happens
-  }
-}
-
 //TODO Slow down if turning backwards into a wall
 inline double calcspeed ( double min_dist )
 {
-  //double tmpMinDist = criticalDist(ALL);
+  double tmpMinDist = criticalDist(FRONT);
 
-  //if (tmpMinDist < MINWALLDIST)
-    //return VEL * (tmpMinDist/MINWALLDIST);
-  if (min_dist < MINWALLDIST)
-    return VEL * (min_dist/MINWALLDIST);
+  if (tmpMinDist < MINWALLDIST)
+    return VEL * (tmpMinDist/MINWALLDIST);
+  //if (min_dist < MINWALLDIST)
+    //return VEL * (min_dist/MINWALLDIST);
   else
     return VEL;
 }
@@ -249,7 +284,7 @@ inline void checkrotate (double * turnrate)
 
 int main( void )
 {
-  try {
+try {
 
   double speed = VEL;
   double turnrate = 0;
@@ -299,15 +334,18 @@ int main( void )
     turnrate = (tmp_turnrate + turnrate) / 2;
 
 #ifdef DEBUG_STATE
-    std::cout << "turnrate: " << turnrate << std::endl;
-    std::cout << "speed: " << speed << std::endl;
-    std::cout << currentState << std::endl;
+    std::cout << "turnrate/speed/state:\t" << turnrate << "\t" << speed << "\t"
+      << currentState << std::endl;
 #endif
 #ifdef DEBUG_DIST
-    std::cout << "Dist (lf/rf/rr/lr):\t" << criticalDist(LEFTFRONT) << "\t" <<
-                                          criticalDist(RIGHTFRONT) << "\t" <<
-                                          criticalDist(RIGHTREAR) << "\t" <<
-                                          criticalDist(LEFTREAR) << std::endl;
+    std::cout << "Dist (lf/f/rf/r/rb/b/lb/l):\t" << criticalDist(LEFTFRONT) << "\t" <<
+      criticalDist(FRONT)      << "\t" <<
+      criticalDist(RIGHTFRONT) << "\t" <<
+      criticalDist(RIGHT)      << "\t" <<
+      criticalDist(RIGHTREAR)  << "\t" <<
+      criticalDist(BACK)       << "\t" <<
+      criticalDist(LEFTREAR)   << "\t" <<
+      criticalDist(LEFT)       << std::endl;
 #endif
 
     // Command the motors
@@ -317,9 +355,9 @@ int main( void )
     left_min  = LPMAX; right_min = LPMAX;
   }
 
-  } catch (PlayerCc::PlayerError e) {
-    std::cerr << e << std::endl; // let's output the error
-    return -1;
-  }
-  return 1;
+} catch (PlayerCc::PlayerError e) {
+  std::cerr << e << std::endl; // let's output the error
+  return -1;
+}
+return 1;
 }
