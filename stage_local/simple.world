@@ -41,6 +41,6 @@ pioneer2dx
   pose [ -7 -7 0 45 ] 
 
   urg_laser()
-  platte()
-  laptop()
+#  platte()
+#  laptop()
 )
