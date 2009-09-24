@@ -216,10 +216,6 @@ inline double criticalDist( viewDirectType viewDirection )
 //TODO Slow down if turning backwards into a wall
 inline double calcspeed ( double min_dist )
 {
-  //double tmpMinDist = criticalDist(ALL);
-
-  //if (tmpMinDist < MINWALLDIST)
-    //return VEL * (tmpMinDist/MINWALLDIST);
   if (min_dist < MINWALLDIST)
     return VEL * (min_dist/MINWALLDIST);
   else
@@ -293,7 +289,6 @@ int main( void )
 
     // Check if rotating is safe
     checkrotate(&tmp_turnrate);
-    //checkrotate(&turnrate);
 
     // Fusion of the vectors makes a smoother trajectory
     turnrate = (tmp_turnrate + turnrate) / 2;
