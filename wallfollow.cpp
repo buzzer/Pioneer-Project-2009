@@ -53,10 +53,10 @@ const int    LSRANGE   = 240; // Range of the Laser sensor
 const int    LFOV      = LSRANGE/2 + FOV; // Left limit of the FOV
 const int    RFOV      = LSRANGE/2 - FOV; // Right limit of the FOV
 const int    MFOV      = LSRANGE/2; // Straight front FOV
-const double MINWALLDIST = 0.6; // preferred_wall_following_distance
+const double MINWALLDIST = 0.5; // preferred_wall_following_distance
 const double STOP_MINWALLDIST = 0.2; // stop_distance
 const double WALLLOSTDIST  = 1.5; // Wall attractor
-const double SHAPE_DIST = 0.25; // Min Radius from sensor for robot shape
+const double SHAPE_DIST = 0.3; // Min Radius from sensor for robot shape
 const double STOP_ROT  = 30; // stop_rotation_speed
                             // low values increase manauverablility in narrow
                             // edges, high values let the robot sometimes be
@@ -83,45 +83,56 @@ inline double smoothTurnrate (double DistLFov)
   return turnrate;
 }
 
-// TODO consider median or mean for more robust laser range
-// Returns minimum distance of requested viewDirection
-// Robot shape shall be considered here !
+// Input: Range of angle (degrees)
+// Output: Minimum distance in range
+// Algorithm calculates the average of 2 or 3 beams
+// to define a minimum value per degree
+inline double getDistanceArc ( int minAngle, int maxAngle )
+{
+  int    beamCount   = 1;
+  double beamSum     = 0.;
+  double averageDist = 0.;
+  double minDist     = LPMAX;
+
+  // Measure minimum distance of each degree
+  for (int rIndex=0, rIndexOld=rIndex, arc=minAngle;      // Init per degree values
+      arc < maxAngle;
+      arc++, rIndexOld=rIndex, beamSum=0., minDist=LPMAX) // Reset per degree values
+  {
+    // Measure average distance of beams belonging to one degree
+    for (rIndex=(int)((double)arc/DEGSTEP); rIndex<(int)((double)(arc+1)/DEGSTEP); rIndex++) {
+      beamSum += lp[rIndex];
+    }
+    beamCount = rIndex-rIndexOld;
+    // Calculate the mean distance per degree
+    averageDist = (double)beamSum/beamCount;
+    // Calculate the minimum distance for the arc
+    averageDist<minDist ? minDist=averageDist : minDist;
+  }
+
+  return minDist;
+}
+
+// Input: Robot view direction
+// Output: Minimum distance of requested viewDirection
+// Robot shape shall be considered here by weighted SHAPE_DIST.
+// Derived arcs, sonars and weights from graphic "PioneerShape.fig".
 // NOTE: ALL might be slow due recursion, use it only for debugging!
 inline double getDistance( viewDirectType viewDirection )
 {
-  double LfMinDist = LPMAX;
-  double RfMinDist = LPMAX;
+  //double LfMinDist = LPMAX;
+  //double RfMinDist = LPMAX;
 
   // Scan safety areas for walls
   switch (viewDirection) {
-    case LEFT      : {
-                       for (int theta=205; theta<240; theta++) // Check small laser range
-                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
-                       return std::min(LfMinDist-SHAPE_DIST*2, std::min(sp[0], sp[15])); // Check also sonar
-                     }
-    case RIGHT     : {
-                       for (int theta=0; theta<35; theta++) // Check small laser range
-                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
-                       return std::min(LfMinDist-SHAPE_DIST*2, std::min(sp[7], sp[8])); // Check also sonar
-                     }
-    case FRONT     : {
-                       for (int theta=115; theta<125; theta++) // Check small laser range
-                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
-                       return std::min(LfMinDist-SHAPE_DIST, std::min(sp[3], sp[4])-SHAPE_DIST); // Check also sonar
-                     }
-    case RIGHTFRONT: {
-                       for (int theta=70; theta<80; theta++) // Check small laser range
-                         RfMinDist = std::min(RfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
-                       return std::min(RfMinDist-SHAPE_DIST*1.3, std::min(sp[5], sp[6])-SHAPE_DIST); // Check also sonar
-                     }
-    case LEFTFRONT : {
-                       for (int theta=160; theta<170; theta++) // Check small laser range
-                         LfMinDist = std::min(LfMinDist, lp[(uint32_t)(theta/DEGSTEP)]);
-                       return std::min(LfMinDist-SHAPE_DIST*1.3, std::min(sp[1], sp[2])-SHAPE_DIST); // Check also sonar
-                     }
+    case LEFT      : return std::min(getDistanceArc(204, 240)-SHAPE_DIST*2  , std::min(sp[0], sp[15])-SHAPE_DIST);
+    case RIGHT     : return std::min(getDistanceArc(0  , 36 )-SHAPE_DIST*2  , std::min(sp[7], sp[8]) -SHAPE_DIST);
+    case FRONT     : return std::min(getDistanceArc(92 , 148)-SHAPE_DIST    , std::min(sp[3], sp[4])-SHAPE_DIST);
+    case RIGHTFRONT: return std::min(getDistanceArc(36 , 92 )-SHAPE_DIST*1.3, std::min(sp[5], sp[6])-SHAPE_DIST);
+    case LEFTFRONT : return std::min(getDistanceArc(148, 204)-SHAPE_DIST*1.3, std::min(sp[1], sp[2])-SHAPE_DIST);
     case BACK      : return std::min(sp[11], sp[12])-SHAPE_DIST; // Sorry, only sonar at rear
-    case LEFTREAR  : return std::min(sp[13], sp[14])-SHAPE_DIST; // Sorry, only sonar at rear
-    case RIGHTREAR : return std::min(sp[9] , sp[10])-SHAPE_DIST; // Sorry, only sonar at rear
+    case LEFTREAR  : return std::min(sp[13], sp[14])-SHAPE_DIST*1.2; // Sorry, only sonar at rear
+    case RIGHTREAR : return std::min(sp[9] , sp[10])-SHAPE_DIST*1.2; // Sorry, only sonar at rear
     case ALL       : return std::min(getDistance(LEFT),
                              std::min(getDistance(RIGHT),
                                std::min(getDistance(FRONT),
@@ -150,10 +161,10 @@ inline double wallfollow( StateType * currentState )
   // Will potentially be overridden by higher prior behaviours
   *currentState = WALL_FOLLOWING;
 
+  DistFront = getDistance(FRONT);
   DistLFov  = getDistance(LEFTFRONT);
   DistL     = getDistance(LEFT);
   DistLRear = getDistance(LEFTREAR);
-  DistFront = getDistance(FRONT);
 
   // do simple (left) wall following
 
@@ -169,8 +180,8 @@ inline double wallfollow( StateType * currentState )
 #endif
     turnrate = smoothTurnrate(DistLFov);
   } else {
-    // do naiv calculus for turnrate
-    turnrate = dtor(K_P * (DistLFov*cos(dtor(45)) - MINWALLDIST));
+    // do naiv calculus for turnrate; weight dist vector
+    turnrate = dtor(K_P * (DistLFov*0.7 - MINWALLDIST));
   }
 #ifdef DEBUG_STATE
   std::cout << "WALLFOLLOW" << std::endl;
@@ -236,21 +247,26 @@ inline void collisionAvoid ( double * turnrate,
   }
 }
 
-//TODO Slow down if turning backwards into a wall
+//TODO Code review
+//TODO Consider turnrate for calculation
 inline double calcspeed ( void )
 {
   double tmpMinDistFront = std::min(getDistance(LEFTFRONT), std::min(getDistance(FRONT), getDistance(RIGHTFRONT)));
-  //double tmpMinDistBack = std::min(getDistance(LEFTREAR), std::min(getDistance(BACK), getDistance(RIGHTREAR)));
+  double tmpMinDistBack  = std::min(getDistance(LEFTREAR), std::min(getDistance(BACK), getDistance(RIGHTREAR)));
   double speed = VEL;
 
-  if (tmpMinDistFront < MINWALLDIST)
+  if (tmpMinDistFront < MINWALLDIST) {
     speed = VEL * (tmpMinDistFront/MINWALLDIST);
-  //if (tmpMinDistBack*2 < MINWALLDIST)
-    //speed = -VEL * (tmpMinDistBack/MINWALLDIST);
+
+    // Do not turn back if there is a wall!
+    if (tmpMinDistFront<0 && tmpMinDistBack<0)
+      tmpMinDistBack<tmpMinDistFront ? speed=(VEL*tmpMinDistFront)/(tmpMinDistFront+tmpMinDistBack) : speed;
+  }
 
   return speed;
 }
 
+//TODO Code review
 // Implements more or less a rotation policy which decides depending on
 // obstacles at the 4 robot edge surounding spots
 // To not interfere to heavy to overall behaviour turnrate is only inverted (or
@@ -258,18 +274,22 @@ inline double calcspeed ( void )
 inline void checkrotate (double * turnrate)
 {
   // Check robot front
-  if (getDistance(LEFTFRONT) < SHAPE_DIST)
-    if (getDistance(RIGHTFRONT) < SHAPE_DIST)
-      *turnrate = 0; else *turnrate>0 ? *turnrate=-*turnrate : *turnrate; // Turn right if not already
-  else if (getDistance(RIGHTFRONT) < SHAPE_DIST)
-    *turnrate<0 ? *turnrate=-*turnrate : *turnrate; // Turn left; Sandwich case already considered above
+  if (getDistance(LEFTFRONT) < 0)
+    if (getDistance(RIGHTFRONT) < 0)
+      *turnrate = 0;
+    else
+      *turnrate>0 ? *turnrate*=(-1) : *turnrate; // Turn right if not already
+  else if (getDistance(RIGHTFRONT) < 0)
+    *turnrate<0 ? *turnrate*=(-1) : *turnrate; // Turn left; Sandwich case already considered above
 
   // Check robot back
-  if (getDistance(LEFTREAR) < SHAPE_DIST)
-    if (getDistance(RIGHTREAR) < SHAPE_DIST)
-      *turnrate = 0; else *turnrate<0 ? *turnrate=-*turnrate : *turnrate; // Turn left if not already
-  else if (getDistance(RIGHTREAR) < SHAPE_DIST)
-    *turnrate>0 ? *turnrate=-*turnrate : *turnrate; // Turn left; Sandwich case already considered above
+  if (getDistance(LEFTREAR) < 0)
+    if (getDistance(RIGHTREAR) < 0)
+      *turnrate = 0;
+    else
+      *turnrate<0 ? *turnrate*=(-1) : *turnrate; // Turn left if not already
+  else if (getDistance(RIGHTREAR) < 0)
+    *turnrate>0 ? *turnrate*=(-1) : *turnrate; // Turn left; Sandwich case already considered above
 }
 
 int main( void )
@@ -315,7 +335,7 @@ try {
       << currentState << std::endl;
 #endif
 #ifdef DEBUG_DIST
-    std::cout << "Dist (l/lf/f/rf/r/rb/b/lb):\t" << getDistance(LEFT)
+    std::cout << "Dist (l/lf/f/rf/r/rb/b/lb):\t" << getDistance(LEFT) << "\t"
       << getDistance(LEFTFRONT)  << "\t"
       << getDistance(FRONT)      << "\t"
       << getDistance(RIGHTFRONT) << "\t"
