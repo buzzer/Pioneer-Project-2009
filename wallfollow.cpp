@@ -43,7 +43,7 @@ enum viewDirectType {   // Used for simple range area distinction
 };
 
 // Parameters
-const double VEL       = 0.3; // normal_advance_speed
+const double VEL       = 0.3; // normal_advance_speed in meters per sec
 const double K_P       = 1000; // kp_wall_following SRO: TODO What's this?
 const double TURN_RATE = 40; // maximal_wall_following_turnrate (deg per sec)
                              // low values: smoother trajectory but more
@@ -58,14 +58,11 @@ const double WALLLOSTDIST  = 1.5; // Wall attractor
 const double SHAPE_DIST = 0.3; // Min Radius from sensor for robot shape
 // Laserranger
 const double DEGSTEP   = 0.3515625; // 360./1024. in degree per laserbeam
-const int    LSRANGE   = 240; // Range of the Laser sensor
+const int    LSRANGE   = 240; // Arc range of the Laser sensor in degrees
 const double LPMAX     = 5.0;  // max laser range in meters
 const double COS45     = 0.70710678119; //cos(M_PI/4);
 //const double TWO_COS45 = 1.41421356237; // 2*COS45
 const double INV_COS45 = 1.41421356237; // 1/COS45
-//const double COS45     = 0.77714596146; // cos(39);
-//const double TWO_COS45 = 1.55429192291; // 2*COS45
-//const double INV_COS45 = 1.28675956589; // 1/COS45
 const double DIAGOFFSET  = 0.1;  // laser to sonar diagonal offset in meters
 const double HORZOFFSET  = 0.15; // laser to sonar horizontal offset in meters
 const double MOUNTOFFSET = 0.1;  // sonar vertical offset at back for laptop mount
@@ -93,31 +90,31 @@ inline double smoothTurnrate (double DistLFov)
 // to define a minimum value per degree
 inline double getDistanceArc ( int minAngle, int maxAngle )
 {
-  double beamSum     = 0.;
+  double sumDist     = 0.;
   double averageDist = 0.;
   double minDist     = LPMAX;
 
-  if ( !(minAngle<0 || maxAngle<0 || minAngle>maxAngle || minAngle>LSRANGE-1 || maxAngle>LSRANGE) )
+  if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=LSRANGE || maxAngle>LSRANGE) )
   {
     // Measure minimum distance of each degree
     for (int arc=minAngle, rIndex=0, rIndexOld=rIndex, beamCount=1;      // Init per degree values
         arc < maxAngle;
-        arc++, beamSum=0.) // Reset per degree values
+        arc++, sumDist=0.) // Reset per degree values
     {
       // Measure average distance of beams belonging to one degree
       for (rIndex=(int)((double)arc/DEGSTEP), rIndexOld=rIndex;
           rIndex<(int)((double)(arc+1)/DEGSTEP);
           rIndex++)
       {
-        beamSum += lp[rIndex];
+        sumDist += lp[rIndex];
       }
       beamCount = rIndex-rIndexOld;
       // Calculate the mean distance per degree
-      averageDist = (double)beamSum/beamCount;
+      averageDist = (double)sumDist/beamCount;
       // Calculate the minimum distance for the arc
       averageDist<minDist ? minDist=averageDist : minDist;
 #ifdef DEBUG_LASER
-      std::cout << beamSum << "\t" << rIndex << "\t" << rIndexOld << "\t" << beamCount << "\t" << averageDist << std::endl;
+      std::cout << sumDist << "\t" << rIndex << "\t" << rIndexOld << "\t" << beamCount << "\t" << averageDist << std::endl;
 #endif
     }
   }
@@ -134,22 +131,22 @@ inline double getDistance( viewDirectType viewDirection )
 {
   // Scan safety areas for walls
   switch (viewDirection) {
-    case LEFT      : return std::min(getDistanceArc(204, 240)-HORZOFFSET-SHAPE_DIST, std::min(sp[0], sp[15])-SHAPE_DIST);
-    case RIGHT     : return std::min(getDistanceArc(0  , 36 )-HORZOFFSET-SHAPE_DIST, std::min(sp[7], sp[8]) -SHAPE_DIST);
-    case FRONT     : return std::min(getDistanceArc(92 , 148)           -SHAPE_DIST, std::min(sp[3], sp[4]) -SHAPE_DIST);
-    case RIGHTFRONT: return std::min(getDistanceArc(36 , 92 )-DIAGOFFSET-SHAPE_DIST, std::min(sp[5], sp[6]) -SHAPE_DIST);
-    case LEFTFRONT : return std::min(getDistanceArc(148, 204)-DIAGOFFSET-SHAPE_DIST, std::min(sp[1], sp[2]) -SHAPE_DIST);
+    case LEFT      : return min(getDistanceArc(204, 240)-HORZOFFSET-SHAPE_DIST, min(sp[0], sp[15])-SHAPE_DIST);
+    case RIGHT     : return min(getDistanceArc(0  , 36 )-HORZOFFSET-SHAPE_DIST, min(sp[7], sp[8]) -SHAPE_DIST);
+    case FRONT     : return min(getDistanceArc(92 , 148)           -SHAPE_DIST, min(sp[3], sp[4]) -SHAPE_DIST);
+    case RIGHTFRONT: return min(getDistanceArc(36 , 92 )-DIAGOFFSET-SHAPE_DIST, min(sp[5], sp[6]) -SHAPE_DIST);
+    case LEFTFRONT : return min(getDistanceArc(148, 204)-DIAGOFFSET-SHAPE_DIST, min(sp[1], sp[2]) -SHAPE_DIST);
     //case LEFTFRONT : return getDistanceArc(165, 166)-DIAGOFFSET-SHAPE_DIST;
-    case BACK      : return std::min(sp[11], sp[12])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-    case LEFTREAR  : return std::min(sp[13], sp[14])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-    case RIGHTREAR : return std::min(sp[9] , sp[10])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-    case ALL       : return std::min(getDistance(LEFT),
-                             std::min(getDistance(RIGHT),
-                               std::min(getDistance(FRONT),
-                                 std::min(getDistance(BACK),
-                                   std::min(getDistance(RIGHTFRONT),
-                                     std::min(getDistance(LEFTFRONT),
-                                       std::min(getDistance(LEFTREAR), getDistance(RIGHTREAR) )))))));
+    case BACK      : return min(sp[11], sp[12])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+    case LEFTREAR  : return min(sp[13], sp[14])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+    case RIGHTREAR : return min(sp[9] , sp[10])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+    case ALL       : return min(getDistance(LEFT),
+                             min(getDistance(RIGHT),
+                               min(getDistance(FRONT),
+                                 min(getDistance(BACK),
+                                   min(getDistance(RIGHTFRONT),
+                                     min(getDistance(LEFTFRONT),
+                                       min(getDistance(LEFTREAR), getDistance(RIGHTREAR) )))))));
     default: return 0.; // Should be recognized if happens
   }
 }
@@ -254,8 +251,8 @@ inline void collisionAvoid ( double * turnrate,
 //TODO Consider turnrate for calculation
 inline double calcspeed ( void )
 {
-  double tmpMinDistFront = std::min(getDistance(LEFTFRONT), std::min(getDistance(FRONT), getDistance(RIGHTFRONT)));
-  double tmpMinDistBack  = std::min(getDistance(LEFTREAR), std::min(getDistance(BACK), getDistance(RIGHTREAR)));
+  double tmpMinDistFront = min(getDistance(LEFTFRONT), min(getDistance(FRONT), getDistance(RIGHTFRONT)));
+  double tmpMinDistBack  = min(getDistance(LEFTREAR), min(getDistance(BACK), getDistance(RIGHTREAR)));
   double speed = VEL;
 
   if (tmpMinDistFront < WALLFOLLOWDIST) {
@@ -346,14 +343,14 @@ try {
       << getDistanceArc(0, 1)    -DIAGOFFSET  << "\t"
       << "XXX"                                << "\t"
       << getDistanceArc(239, 240)-DIAGOFFSET  << std::endl;
-    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << std::min(sp[15],sp[0]) << "\t"
-      << std::min(sp[1],sp[2])               << "\t"
-      << std::min(sp[3],sp[4])               << "\t"
-      << std::min(sp[5],sp[6])               << "\t"
-      << std::min(sp[7],sp[8])               << "\t"
-      << std::min(sp[9],sp[10]) -MOUNTOFFSET << "\t"
-      << std::min(sp[11],sp[12])-MOUNTOFFSET << "\t"
-      << std::min(sp[13],sp[14])-MOUNTOFFSET << std::endl;
+    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << min(sp[15],sp[0]) << "\t"
+      << min(sp[1],sp[2])               << "\t"
+      << min(sp[3],sp[4])               << "\t"
+      << min(sp[5],sp[6])               << "\t"
+      << min(sp[7],sp[8])               << "\t"
+      << min(sp[9],sp[10]) -MOUNTOFFSET << "\t"
+      << min(sp[11],sp[12])-MOUNTOFFSET << "\t"
+      << min(sp[13],sp[14])-MOUNTOFFSET << std::endl;
     std::cout << "Shape (l/lf/f/rf/r/rb/b/lb):\t" << getDistance(LEFT) << "\t"
       << getDistance(LEFTFRONT)  << "\t"
       << getDistance(FRONT)      << "\t"
