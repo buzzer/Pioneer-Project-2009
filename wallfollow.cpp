@@ -227,11 +227,11 @@ inline double calcspeed ( void )
   if (tmpMinDistFront < WALLFOLLOWDIST) {
     speed = VEL * (tmpMinDistFront/WALLFOLLOWDIST);
 
-    // Do not turn back if there is a wall!
-    if (tmpMinDistFront<0 && tmpMinDistBack<0)
-      speed=(VEL*(tmpMinDistFront-tmpMinDistBack))/WALLFOLLOWDIST;
-      //tmpMinDistBack<tmpMinDistFront ? speed=(VEL*tmpMinDistFront)/(tmpMinDistFront+tmpMinDistBack) : speed;
-      //tmpMinDistBack<tmpMinDistFront ? speed=(VEL*(tmpMinDistFront-tmpMinDistBack))/WALLFOLLOWDIST : speed;
+  // Do not turn back if there is a wall!
+  if (tmpMinDistFront<0 && tmpMinDistBack<0)
+    tmpMinDistBack<tmpMinDistFront ? speed=(VEL*tmpMinDistFront)/(tmpMinDistFront+tmpMinDistBack) : speed;
+    //speed=(VEL*(tmpMinDistBack-tmpMinDistFront))/SHAPE_DIST;
+    //tmpMinDistBack<tmpMinDistFront ? speed=(VEL*(tmpMinDistFront-tmpMinDistBack))/WALLFOLLOWDIST : speed;
   }
 
   return speed;
