@@ -24,6 +24,7 @@ Position2dProxy pp(&robot,0);
 #define DEBUG_LSONAR_NO
 #define DEBUG_LASER_NO
 #define DEBUG_DIST_NO
+#define DEBUG_POSITION_NO
 
 enum StateType {      // Current behaviour of the robot
   WALL_FOLLOWING,
@@ -365,6 +366,10 @@ try {
 
     // Command the motors
     pp.SetSpeed(speed, turnrate);
+
+#ifdef DEBUG_POSITION
+    std::cout << pp.GetXPos() << "\t" << pp.GetYPos() << "\t" << rtod(pp.GetYaw()) << std::endl;
+#endif
   }
 
 } catch (PlayerCc::PlayerError e) {
