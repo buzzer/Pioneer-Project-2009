@@ -60,12 +60,16 @@ const double SHAPE_DIST = 0.3; // Min Radius from sensor for robot shape
 const double DEGSTEP   = 0.3515625; // 360./1024. in degree per laserbeam
 const int    LSRANGE   = 240; // Arc range of the Laser sensor in degrees
 const double LPMAX     = 5.0;  // max laser range in meters
-const double COS45     = 0.70710678119; //cos(M_PI/4);
-//const double TWO_COS45 = 1.41421356237; // 2*COS45
-const double INV_COS45 = 1.41421356237; // 1/COS45
+const double COS45     = 0.83867056795; // cos(33);
+const double INV_COS45 = 1.19236329284; // 1/COS45
 const double DIAGOFFSET  = 0.1;  // laser to sonar diagonal offset in meters
 const double HORZOFFSET  = 0.15; // laser to sonar horizontal offset in meters
 const double MOUNTOFFSET = 0.1;  // sonar vertical offset at back for laptop mount
+const int LMIN  = 175; const int LMAX  = 240; // LEFT
+const int LFMIN = 140; const int LFMAX = 175; // LEFTFRONT
+const int FMIN  = 100; const int FMAX  = 140; // FRONT
+const int RFMIN = 65;  const int RFMAX = 100; // RIGHTFRONT
+const int RMIN  = 0;   const int RMAX  = 65;  // RIGHT
 
 // Measure angle to left wall and give appropriate turnrate back
 inline double smoothTurnrate (double DistLFov)
@@ -131,12 +135,11 @@ inline double getDistance( viewDirectType viewDirection )
 {
   // Scan safety areas for walls
   switch (viewDirection) {
-    case LEFT      : return min(getDistanceArc(204, 240)-HORZOFFSET-SHAPE_DIST, min(sp[0], sp[15])-SHAPE_DIST);
-    case RIGHT     : return min(getDistanceArc(0  , 36 )-HORZOFFSET-SHAPE_DIST, min(sp[7], sp[8]) -SHAPE_DIST);
-    case FRONT     : return min(getDistanceArc(92 , 148)           -SHAPE_DIST, min(sp[3], sp[4]) -SHAPE_DIST);
-    case RIGHTFRONT: return min(getDistanceArc(36 , 92 )-DIAGOFFSET-SHAPE_DIST, min(sp[5], sp[6]) -SHAPE_DIST);
-    case LEFTFRONT : return min(getDistanceArc(148, 204)-DIAGOFFSET-SHAPE_DIST, min(sp[1], sp[2]) -SHAPE_DIST);
-    //case LEFTFRONT : return getDistanceArc(165, 166)-DIAGOFFSET-SHAPE_DIST;
+    case LEFT      : return min(getDistanceArc(LMIN,  LMAX) -HORZOFFSET-SHAPE_DIST, min(sp[0], sp[15])-SHAPE_DIST);
+    case RIGHT     : return min(getDistanceArc(RMIN,  RMAX) -HORZOFFSET-SHAPE_DIST, min(sp[7], sp[8]) -SHAPE_DIST);
+    case FRONT     : return min(getDistanceArc(FMIN,  FMAX)            -SHAPE_DIST, min(sp[3], sp[4]) -SHAPE_DIST);
+    case RIGHTFRONT: return min(getDistanceArc(RFMIN, RFMAX)-DIAGOFFSET-SHAPE_DIST, min(sp[5], sp[6]) -SHAPE_DIST);
+    case LEFTFRONT : return min(getDistanceArc(LFMIN, LFMAX)-DIAGOFFSET-SHAPE_DIST, min(sp[1], sp[2]) -SHAPE_DIST);
     case BACK      : return min(sp[11], sp[12])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
     case LEFTREAR  : return min(sp[13], sp[14])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
     case RIGHTREAR : return min(sp[9] , sp[10])-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
@@ -197,8 +200,7 @@ inline double wallfollow( StateType * currentState )
 #endif
 
   // Normalize turnrate
-  if ( std::abs(turnrate) > dtor(TURN_RATE) )
-    turnrate<0 ? turnrate=-dtor(TURN_RATE) : turnrate=dtor(TURN_RATE);
+  turnrate = limit(turnrate, -dtor(TURN_RATE), dtor(TURN_RATE));
 
   // Go straight if no wall is in distance (front, left and left front)
   if (DistLFov  >= WALLLOSTDIST  &&
@@ -335,14 +337,14 @@ try {
       << currentState << std::endl;
 #endif
 #ifdef DEBUG_DIST
-    std::cout << "Laser (l/lf/f/rf/r/rb/b/lb):\t" << getDistanceArc(210, 211)-HORZOFFSET << "\t"
-      << getDistanceArc(165, 166)-DIAGOFFSET  << "\t"
-      << getDistanceArc(120, 121)             << "\t"
-      << getDistanceArc(75, 76)  -DIAGOFFSET  << "\t"
-      << getDistanceArc(30, 31)  -HORZOFFSET  << "\t"
-      << getDistanceArc(0, 1)    -DIAGOFFSET  << "\t"
-      << "XXX"                                << "\t"
-      << getDistanceArc(239, 240)-DIAGOFFSET  << std::endl;
+    std::cout << "Laser (l/lf/f/rf/r/rb/b/lb):\t" << getDistanceArc(LMIN, LMAX)-HORZOFFSET << "\t"
+      << getDistanceArc(LFMIN, LFMAX)-DIAGOFFSET  << "\t"
+      << getDistanceArc(FMIN, FMAX)               << "\t"
+      << getDistanceArc(RFMIN, RFMAX)-DIAGOFFSET  << "\t"
+      << getDistanceArc(RMIN, RMAX)  -HORZOFFSET  << "\t"
+      << "XXX"                                    << "\t"
+      << "XXX"                                    << "\t"
+      << "XXX"                                    << std::endl;
     std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << min(sp[15],sp[0]) << "\t"
       << min(sp[1],sp[2])               << "\t"
       << min(sp[3],sp[4])               << "\t"
