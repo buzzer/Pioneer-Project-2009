@@ -21,7 +21,6 @@ Position2dProxy pp(&robot,0);
 #define DEBUG_STATE_NO
 #define DEBUG_CRIT_NO
 #define DEBUG_SONAR_NO
-#define DEBUG_LSONAR_NO
 #define DEBUG_LASER_NO
 #define DEBUG_DIST_NO
 #define DEBUG_POSITION_NO
@@ -71,23 +70,6 @@ const int LFMIN = 140; const int LFMAX = 175; // LEFTFRONT
 const int FMIN  = 100; const int FMAX  = 140; // FRONT
 const int RFMIN = 65;  const int RFMAX = 100; // RIGHTFRONT
 const int RMIN  = 0;   const int RMAX  = 65;  // RIGHT
-
-// Measure angle to left wall and give appropriate turnrate back
-inline double smoothTurnrate (double DistLFov)
-{
-  double turnrate = 0;
-
-  // Calculate turn angle
-  turnrate = atan( ( sp[0] - sp[15] ) / 0.23 );
-  // Keep wall following distance to speed up
-  DistLFov<(INV_COS45*WALLFOLLOWDIST) ? turnrate-=0.1 : turnrate+=0.1;
-
-#ifdef DEBUG_LSONAR
-  std::cout << "sp[0],sp[15],turnrate: " << sp[0] << "\t" << sp[15] << "\t" << rtod(turnrate) << std::endl;
-#endif
-
-  return turnrate;
-}
 
 // Input: Range of angle (degrees)
 // Output: Minimum distance in range
@@ -178,24 +160,8 @@ inline double wallfollow( StateType * currentState )
   DistLRear = getDistance(LEFTREAR);
 
   // do simple (left) wall following
-
-  // Check conditions for smooth wall following
-  // up to ~45 degrees to wall
-  if ( ( std::abs(sp[15] - sp[0]) < 0.2 ) &&
-       ( DistLFov < WALLFOLLOWDIST + 0.5) &&
-       ( DistLFov > STOP_WALLFOLLOWDIST ) &&
-       ( DistFront > 1.0 )                   )
-  {
-#ifdef DEBUG_STATE
-    std::cout << "OPTIMIZED FOLLOW\t" << DistLFov << std::endl;
-#endif
-    turnrate = smoothTurnrate(DistLFov);
-  } else {
-    //do naiv calculus for turnrate; weight dist vector
-    turnrate = dtor(K_P * (COS45*DistLFov - WALLFOLLOWDIST));
-    //turnrate = M_PI/-2 + acos( (DistL - COS45*(DistLFov+0.15) /
-        //sqrt(DistL*DistL+(DistLFov+0.15)*(DistLFov+0.15)-TWO_COS45*DistL*(DistLFov+0.15))));
-  }
+  //do naiv calculus for turnrate; weight dist vector
+  turnrate = atan( (COS45*DistLFov - WALLFOLLOWDIST ) * 4 );
 #ifdef DEBUG_STATE
   std::cout << "WALLFOLLOW" << std::endl;
 #endif
@@ -263,7 +229,9 @@ inline double calcspeed ( void )
 
     // Do not turn back if there is a wall!
     if (tmpMinDistFront<0 && tmpMinDistBack<0)
-      tmpMinDistBack<tmpMinDistFront ? speed=(VEL*tmpMinDistFront)/(tmpMinDistFront+tmpMinDistBack) : speed;
+      speed=(VEL*(tmpMinDistFront-tmpMinDistBack))/WALLFOLLOWDIST;
+      //tmpMinDistBack<tmpMinDistFront ? speed=(VEL*tmpMinDistFront)/(tmpMinDistFront+tmpMinDistBack) : speed;
+      //tmpMinDistBack<tmpMinDistFront ? speed=(VEL*(tmpMinDistFront-tmpMinDistBack))/WALLFOLLOWDIST : speed;
   }
 
   return speed;
@@ -276,23 +244,13 @@ inline double calcspeed ( void )
 // set to zero)
 inline void checkrotate (double * turnrate)
 {
-  // Check robot front
-  if (getDistance(LEFTFRONT) < 0)
-    if (getDistance(RIGHTFRONT) < 0)
-      *turnrate = 0;
-    else
-      *turnrate>0 ? *turnrate*=(-1) : *turnrate; // Turn right if not already
-  else if (getDistance(RIGHTFRONT) < 0)
-    *turnrate<0 ? *turnrate*=(-1) : *turnrate; // Turn left; Sandwich case already considered above
-
-  // Check robot back
-  if (getDistance(LEFTREAR) < 0)
-    if (getDistance(RIGHTREAR) < 0)
-      *turnrate = 0;
-    else
-      *turnrate<0 ? *turnrate*=(-1) : *turnrate; // Turn left if not already
-  else if (getDistance(RIGHTREAR) < 0)
-    *turnrate>0 ? *turnrate*=(-1) : *turnrate; // Turn left; Sandwich case already considered above
+  if (*turnrate < 0) { // Right turn
+    getDistance(LEFTREAR)<0 ? *turnrate=0 : *turnrate;
+    getDistance(RIGHT)   <0 ? *turnrate=0 : *turnrate;
+  } else { // Left turn
+    getDistance(RIGHTREAR)<0 ? *turnrate=0 : *turnrate;
+    getDistance(LEFT)     <0 ? *turnrate=0 : *turnrate;
+  }
 }
 
 int main( void )
