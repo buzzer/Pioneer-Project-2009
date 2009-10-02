@@ -40,7 +40,9 @@ pioneer2dx
   name "robot1"
   pose [ -7 -7 0 45 ] 
 
-  urg_laser()
+  urg_laser(
+    ctrl "lasernoise"
+  )
   platte()
   laptop()
 )
