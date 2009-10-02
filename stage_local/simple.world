@@ -1,8 +1,8 @@
 include "pioneer.inc"
 include "map.inc"
 include "urg.inc"
-include "laptop.inc"
 include "platte.inc"
+include "laptop.inc"
 
 interval_sim 100  # simulation timestep in milliseconds
 interval_real 20  # real-time interval between simulation updates in milliseconds 
@@ -40,7 +40,9 @@ pioneer2dx
   name "robot1"
   pose [ -7 -7 0 45 ] 
 
-  urg_laser()
+  urg_laser(
+    ctrl "lasernoise"
+  )
   platte()
   laptop()
 )
