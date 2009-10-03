@@ -2,25 +2,24 @@
 // This is part of the robotics students project at Uni Hamburg in 2009.
 // COPYRIGHT Sebastian Rockel 2009
 //
-#ifdef DEBUG
+#ifdef DEBUG  // {{{
 #include <iostream>
-#endif
+#endif  // }}}
 #include <cmath>
 #include <libplayerc++/playerc++.h>
 
 using namespace PlayerCc;
 
-#define DEBUG_NO// Has to be set if any debug output wanted !!!
+#define DEBUG_NO// Has to be set if any debug output wanted !!! {{{
 #define DEBUG_STATE_NO
 #define DEBUG_CRIT_NO
 #define DEBUG_SONAR_NO
 #define DEBUG_LASER_NO
 #define DEBUG_DIST_NO
-#define DEBUG_POSITION_NO
+#define DEBUG_POSITION_NO // }}}
 
-// Parameters
+// Parameters {{{
 const double VEL       = 0.3; // normal_advance_speed in meters per sec
-const double K_P       = 1000; // kp_wall_following SRO: TODO What's this?
 const double TURN_RATE = 40; // maximal_wall_following_turnrate (deg per sec)
                              // low values: smoother trajectory but more
                              // restricted
@@ -46,20 +45,20 @@ const int LFMIN = 140; const int LFMAX = 175; // LEFTFRONT
 const int FMIN  = 100; const int FMAX  = 140; // FRONT
 const int RFMIN = 65;  const int RFMAX = 100; // RIGHTFRONT
 const int RMIN  = 0;   const int RMAX  = 65;  // RIGHT
+// }}} Parameters
 
-class Robot
-{
+class Robot {
 private:
   PlayerClient    *robot;
   LaserProxy      *lp;
   SonarProxy      *sp;
   Position2dProxy *pp;
-  enum StateType {      // Current behaviour of the robot
+  enum StateType {      // Current behaviour of the robot {{{
     WALL_FOLLOWING,
     COLLISION_AVOIDANCE,
     WALL_SEARCHING
-  };
-  enum viewDirectType {   // Used for simple range area distinction
+  };  // }}}
+  enum viewDirectType {   // Used for simple range area distinction {{{
     LEFT,
     RIGHT,
     FRONT,
@@ -69,7 +68,7 @@ private:
     LEFTREAR,
     RIGHTREAR,
     ALL
-  };
+  };  // }}}
   int       robotID;
   double    speed;
   double    turnrate, tmp_turnrate;
@@ -104,9 +103,9 @@ private:
         averageDist = (double)sumDist/beamCount;
         // Calculate the minimum distance for the arc
         averageDist<minDist ? minDist=averageDist : minDist;
-#ifdef DEBUG_LASER
+#ifdef DEBUG_LASER  // {{{
         std::cout << sumDist << "\t" << rIndex << "\t" << rIndexOld << "\t" << beamCount << "\t" << averageDist << std::endl;
-#endif
+#endif  // }}}
       }
     }
     return minDist;
@@ -165,9 +164,9 @@ private:
     // do simple (left) wall following
     //do naiv calculus for turnrate; weight dist vector
     turnrate = atan( (COS45*DistLFov - WALLFOLLOWDIST ) * 4 );
-#ifdef DEBUG_STATE
+#ifdef DEBUG_STATE  // {{{
     std::cout << "WALLFOLLOW" << std::endl;
-#endif
+#endif  // }}}
 
     // Normalize turnrate
     turnrate = limit(turnrate, -dtor(TURN_RATE), dtor(TURN_RATE));
@@ -179,9 +178,9 @@ private:
     {
       turnrate = 0;
       *currentState = WALL_SEARCHING;
-#ifdef DEBUG_STATE
+#ifdef DEBUG_STATE  // {{{
       std::cout << "WALL_SEARCHING" << std::endl;
-#endif
+#endif  // }}}
     }
     return turnrate;
   }
@@ -197,8 +196,7 @@ private:
   }
 
   // Biased by left wall following
-  inline void collisionAvoid ( double * turnrate,
-      StateType * currentState)
+  inline void collisionAvoid ( double * turnrate, StateType * currentState)
   {
     double left_min  = LPMAX;
     double right_min = LPMAX;
@@ -212,14 +210,13 @@ private:
       *currentState = COLLISION_AVOIDANCE;
       // Turn right as long we want left wall following
       *turnrate = -dtor(STOP_ROT);
-#ifdef DEBUG_STATE
+#ifdef DEBUG_STATE  // {{{
       std::cout << "COLLISION_AVOIDANCE" << std::endl;
-#endif
+#endif  // }}}
     }
   }
 
   //TODO Code review
-  //TODO Consider turnrate for calculation
   inline double calcspeed ( void )
   {
     double tmpMinDistFront = min(getDistance(LEFTFRONT), min(getDistance(FRONT), getDistance(RIGHTFRONT)));
@@ -265,12 +262,12 @@ public:
   }
 
   void update ( void ) { robot->Read(); }
-  void plan ( void) {
-#ifdef DEBUG_SONAR
+  void plan ( void ) {
+#ifdef DEBUG_SONAR  // {{{
     std::cout << std::endl;
     for(int i=0; i< 16; i++)
       std::cout << "Sonar " << i << ": " << sp->GetScan(i) << std::endl;
-#endif
+#endif  // }}}
     // (Left) Wall following
     turnrate = wallfollow(&currentState);
 
@@ -286,11 +283,11 @@ public:
 
     // Fusion of the vectors makes a smoother trajectory
     turnrate = (tmp_turnrate + turnrate) / 2;
-#ifdef DEBUG_STATE
+#ifdef DEBUG_STATE  // {{{
     std::cout << "turnrate/speed/state:\t" << turnrate << "\t" << speed << "\t"
       << currentState << std::endl;
-#endif
-#ifdef DEBUG_DIST
+#endif  // }}}
+#ifdef DEBUG_DIST // {{{
     std::cout << "Laser (l/lf/f/rf/r/rb/b/lb):\t" << getDistanceLas(LMIN, LMAX)-HORZOFFSET << "\t"
       << getDistanceLas(LFMIN, LFMAX)-DIAGOFFSET  << "\t"
       << getDistanceLas(FMIN,  FMAX)              << "\t"
@@ -315,25 +312,29 @@ public:
       << getDistance(RIGHTREAR)  << "\t"
       << getDistance(BACK)       << "\t"
       << getDistance(LEFTREAR)   << std::endl;
-#endif
-#ifdef DEBUG_POSITION
+#endif // }}}
+#ifdef DEBUG_POSITION // {{{
     std::cout << pp->GetXPos() << "\t" << pp->GetYPos() << "\t" << rtod(pp->GetYaw()) << std::endl;
-#endif
+#endif  // }}}
   }
   // Command the motors
   void execute() { pp->SetSpeed(speed, turnrate); }
-};
-
-
+}; // Class Robot
 
 int main ( void ) {
   try {
-    Robot pioneer("localhost", 6665, 0);
+    Robot pioneer0("localhost", 6665, 0);
+    Robot pioneer1("localhost", 6666, 0);
     std::cout.precision(2);
     while (true) {
-      pioneer.update();
-      pioneer.plan();
-      pioneer.execute();
+      pioneer0.update();
+      pioneer1.update();
+
+      pioneer0.plan();
+      pioneer1.plan();
+
+      pioneer0.execute();
+      pioneer1.execute();
     }
   } catch (PlayerCc::PlayerError e) {
     std::cerr << e << std::endl; // let's output the error

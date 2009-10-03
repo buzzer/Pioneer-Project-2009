@@ -1,3 +1,4 @@
+# Project world file
 include "pioneer.inc"
 include "map.inc"
 include "urg.inc"
@@ -37,7 +38,7 @@ floorplan
 pioneer2dx
 (		  
   # can refer to the robot by this name
-  name "robot1"
+  name "robot0"
   pose [ -7 -7 0 45 ] 
 
   urg_laser(
@@ -45,4 +46,13 @@ pioneer2dx
   )
   platte()
   laptop()
+)
+
+pioneer2dx
+(		  
+  # can refer to the robot by this name
+  name "robot1"
+  pose [ 7 7 0 -135 ] 
+
+  urg_laser()
 )
