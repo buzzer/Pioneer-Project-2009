@@ -59,3 +59,9 @@ run:
 
 tags:
 	${CTAGS} -f ${TAGFILE} -R ${TAGSRCS}
+
+docs:
+	doxygen
+
+docsclean:
+	rm -fr doc/doxygen/*
