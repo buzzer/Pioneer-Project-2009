@@ -1,7 +1,8 @@
-// Wall following example for Pioneer 2DX robot.
-// This is part of the robotics students project at Uni Hamburg in 2009.
-// COPYRIGHT Sebastian Rockel 2009
-//
+/// @file wallfollow.cpp
+/// @author Sebastian Rockel
+/// @mainpage Robotic Project
+/// Wall following example for Pioneer 2DX robot.
+/// This is part of the robotics students project at Uni Hamburg in 2009.
 #ifdef DEBUG  // {{{
 #include <iostream>
 #endif  // }}}
@@ -19,32 +20,32 @@ using namespace PlayerCc;
 #define DEBUG_POSITION_NO // }}}
 
 // Parameters {{{
-const double VEL       = 0.3; // normal_advance_speed in meters per sec
-const double TURN_RATE = 40; // maximal_wall_following_turnrate (deg per sec)
-                             // low values: smoother trajectory but more
-                             // restricted
-const double STOP_ROT  = 30; // stop_rotation_speed
-                             // low values increase manauverablility in narrow
-                             // edges, high values let the robot sometimes be
-                             // stuck
-const double WALLFOLLOWDIST = 0.5; // preferred_wall_following_distance
-const double STOP_WALLFOLLOWDIST = 0.2; // stop_distance
-const double WALLLOSTDIST  = 1.5; // Wall attractor
-const double SHAPE_DIST = 0.3; // Min Radius from sensor for robot shape
+const double VEL       = 0.3;///< Normal_advance_speed in meters per sec
+const double TURN_RATE = 40; ///< maximal_wall_following_turnrate (deg per sec)
+                             /// low values: smoother trajectory but more
+                             /// restricted
+const double STOP_ROT  = 30; ///< stop_rotation_speed
+                             /// low values increase manauverablility in narrow
+                             /// edges, high values let the robot sometimes be
+                             /// stuck
+const double WALLFOLLOWDIST = 0.5; ///< Preferred_wall_following_distance
+const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance
+const double WALLLOSTDIST  = 1.5; ///< Wall attractor
+const double SHAPE_DIST = 0.3; ///< Min Radius from sensor for robot shape
 // Laserranger
-const double DEGSTEP   = 0.3515625; // 360./1024. in degree per laserbeam
-const int    LSRANGE   = 240; // Arc range of the Laser sensor in degrees
-const double LPMAX     = 5.0;  // max laser range in meters
-const double COS45     = 0.83867056795; // cos(33);
-const double INV_COS45 = 1.19236329284; // 1/COS45
-const double DIAGOFFSET  = 0.1;  // laser to sonar diagonal offset in meters
-const double HORZOFFSET  = 0.15; // laser to sonar horizontal offset in meters
-const double MOUNTOFFSET = 0.1;  // sonar vertical offset at back for laptop mount
-const int LMIN  = 175; const int LMAX  = 240; // LEFT
-const int LFMIN = 140; const int LFMAX = 175; // LEFTFRONT
-const int FMIN  = 100; const int FMAX  = 140; // FRONT
-const int RFMIN = 65;  const int RFMAX = 100; // RIGHTFRONT
-const int RMIN  = 0;   const int RMAX  = 65;  // RIGHT
+const double DEGSTEP   = 0.3515625; ///< 360./1024. in degree per laserbeam
+const int    LSRANGE   = 240; ///< Arc range of the Laser sensor in degrees
+const double LPMAX     = 5.0;  ///< max laser range in meters
+const double COS45     = 0.83867056795; ///< cos(33);
+const double INV_COS45 = 1.19236329284; ///< 1/COS45
+const double DIAGOFFSET  = 0.1;  ///< laser to sonar diagonal offset in meters
+const double HORZOFFSET  = 0.15; ///< laser to sonar horizontal offset in meters
+const double MOUNTOFFSET = 0.1;  ///< sonar vertical offset at back for laptop mount
+const int LMIN  = 175; const int LMAX  = 240; ///< LEFT
+const int LFMIN = 140; const int LFMAX = 175; ///< LEFTFRONT
+const int FMIN  = 100; const int FMAX  = 140; ///< FRONT
+const int RFMIN = 65;  const int RFMAX = 100; ///< RIGHTFRONT
+const int RMIN  = 0;   const int RMAX  = 65;  ///< RIGHT
 // }}} Parameters
 
 class Robot {
@@ -53,12 +54,14 @@ private:
   LaserProxy      *lp;
   SonarProxy      *sp;
   Position2dProxy *pp;
-  enum StateType {      // Current behaviour of the robot {{{
+  /// Current behaviour of the robot.
+  enum StateType {  // {{{
     WALL_FOLLOWING,
     COLLISION_AVOIDANCE,
     WALL_SEARCHING
   };  // }}}
-  enum viewDirectType {   // Used for simple range area distinction {{{
+  /// Used for simple range area distinction.
+  enum viewDirectType { // {{{
     LEFT,
     RIGHT,
     FRONT,
@@ -74,10 +77,11 @@ private:
   double    turnrate, tmp_turnrate;
   StateType currentState;
 
-  // Input: Range of angle (degrees)
-  // Output: Minimum distance in range
-  // Algorithm calculates the average of 2 or 3 beams
-  // to define a minimum value per degree
+  /// Returns the minimum distance of the given arc.
+  /// Algorithm calculates the average of 2 or 3 beams
+  /// to define a minimum value per degree.
+  /// @param Range of angle (degrees)
+  /// @return Minimum distance in range
   inline double getDistanceLas ( int minAngle, int maxAngle )
   {
     double sumDist     = 0.;
@@ -111,11 +115,12 @@ private:
     return minDist;
   }
 
-  // Input: Robot view direction
-  // Output: Minimum distance of requested viewDirection
-  // Robot shape shall be considered here by weighted SHAPE_DIST.
-  // Derived arcs, sonars and weights from graphic "PioneerShape.fig".
-  // NOTE: ALL might be slow due recursion, use it only for debugging!
+  /// Returns the minimum distance of the given view direction.
+  /// Robot shape shall be considered here by weighted SHAPE_DIST.
+  /// Derived arcs, sonars and weights from graphic "PioneerShape.fig".
+  /// NOTE: ALL might be slow due recursion, use it only for debugging!
+  /// @param Robot view direction
+  /// @return Minimum distance of requested view Direction
   inline double getDistance( viewDirectType viewDirection )
   {
     // Scan safety areas for walls
@@ -139,11 +144,10 @@ private:
     }
   }
 
-  // Calculates the turnrate from range measurement and minimum wall follow
-  // distance
-  // meas: range measurement in meters
-  // minwalldist: wall follow distance in meters
-  // turnrate: rotation rate
+  /// Calculates the turnrate from range measurement and minimum wall follow
+  /// distance.
+  /// @param Current state of the robot.
+  /// @returns Turnrate to follow wall.
   inline double wallfollow( StateType * currentState )
   {
     double turnrate  = 0;
@@ -216,7 +220,7 @@ private:
     }
   }
 
-  //TODO Code review
+  /// @todo Code review
   inline double calcspeed ( void )
   {
     double tmpMinDistFront = min(getDistance(LEFTFRONT), min(getDistance(FRONT), getDistance(RIGHTFRONT)));
@@ -235,11 +239,13 @@ private:
     return speed;
   }
 
-  //TODO Code review
-  // Implements more or less a rotation policy which decides depending on
-  // obstacles at the 4 robot edge surounding spots
-  // To not interfere to heavy to overall behaviour turnrate is only inverted (or
-  // set to zero)
+  /// @todo code review
+  /// Checks if turning the robot is not causing collisions.
+  /// Implements more or less a rotation policy which decides depending on
+  /// obstacles at the 4 robot edge surounding spots
+  /// To not interfere to heavy to overall behaviour turnrate is only inverted (or
+  /// set to zero)
+  /// @param Turnrate
   inline void checkrotate (double * turnrate)
   {
     if (*turnrate < 0) { // Right turn
