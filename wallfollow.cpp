@@ -20,34 +20,36 @@ using namespace PlayerCc;
 #define DEBUG_POSITION_NO // }}}
 
 // Parameters {{{
-const double VEL       = 0.3;///< Normal_advance_speed in meters per sec
-const double TURN_RATE = 40; ///< maximal_wall_following_turnrate (deg per sec)
-                             /// low values: smoother trajectory but more
+const double VEL       = 0.3;///< Normal_advance_speed in meters per sec.
+const double TURN_RATE = 40; ///< Max wall following turnrate in deg per sec.
+                             /// Low values: Smoother trajectory but more
                              /// restricted
-const double STOP_ROT  = 30; ///< stop_rotation_speed
-                             /// low values increase manauverablility in narrow
+const double STOP_ROT  = 30; ///< Stop rotation speed.
+                             /// Low values increase manauverablility in narrow
                              /// edges, high values let the robot sometimes be
-                             /// stuck
-const double WALLFOLLOWDIST = 0.5; ///< Preferred_wall_following_distance
-const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance
-const double WALLLOSTDIST  = 1.5; ///< Wall attractor
-const double SHAPE_DIST = 0.3; ///< Min Radius from sensor for robot shape
+                             /// stuck.
+const double WALLFOLLOWDIST = 0.5; ///< Preferred wall following distance.
+const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance.
+const double WALLLOSTDIST  = 1.5; ///< Wall attractor.
+const double SHAPE_DIST = 0.3; ///< Min Radius from sensor for robot shape.
 // Laserranger
 const double DEGSTEP   = 0.3515625; ///< 360./1024. in degree per laserbeam
 const int    LSRANGE   = 240; ///< Arc range of the Laser sensor in degrees
 const double LPMAX     = 5.0;  ///< max laser range in meters
-const double COS45     = 0.83867056795; ///< cos(33);
+const double COS45     = 0.83867056795; ///< Cos(33);
 const double INV_COS45 = 1.19236329284; ///< 1/COS45
-const double DIAGOFFSET  = 0.1;  ///< laser to sonar diagonal offset in meters
-const double HORZOFFSET  = 0.15; ///< laser to sonar horizontal offset in meters
-const double MOUNTOFFSET = 0.1;  ///< sonar vertical offset at back for laptop mount
-const int LMIN  = 175; const int LMAX  = 240; ///< LEFT
-const int LFMIN = 140; const int LFMAX = 175; ///< LEFTFRONT
-const int FMIN  = 100; const int FMAX  = 140; ///< FRONT
-const int RFMIN = 65;  const int RFMAX = 100; ///< RIGHTFRONT
-const int RMIN  = 0;   const int RMAX  = 65;  ///< RIGHT
+const double DIAGOFFSET  = 0.1;  ///< Laser to sonar diagonal offset in meters.
+const double HORZOFFSET  = 0.15; ///< Laser to sonar horizontal offset in meters.
+const double MOUNTOFFSET = 0.1;  ///< Sonar vertical offset at back for laptop mount.
+const int LMIN  = 175;/**< LEFT min angle.       */ const int LMAX  = 240; ///< LEFT max angle.
+const int LFMIN = 140;/**< LEFTFRONT min angle.  */ const int LFMAX = 175; ///< LEFTFRONT max angle.
+const int FMIN  = 100;/**< FRONT min angle.      */ const int FMAX  = 140; ///< FRONT max angle.
+const int RFMIN = 65; /**< RIGHTFRONT min angle. */ const int RFMAX = 100; ///< RIGHTFRONT max angle.
+const int RMIN  = 0;  /**< RIGHT min angle.      */ const int RMAX  = 65;  ///< RIGHT max angle.
 // }}} Parameters
 
+/// This class represents a robot.
+/// The robot object provides wall following behaviour.
 class Robot {
 private:
   PlayerClient    *robot;
@@ -239,13 +241,13 @@ private:
     return speed;
   }
 
-  /// @todo code review
   /// Checks if turning the robot is not causing collisions.
   /// Implements more or less a rotation policy which decides depending on
   /// obstacles at the 4 robot edge surounding spots
   /// To not interfere to heavy to overall behaviour turnrate is only inverted (or
   /// set to zero)
   /// @param Turnrate
+  /// @todo Code review
   inline void checkrotate (double * turnrate)
   {
     if (*turnrate < 0) { // Right turn
