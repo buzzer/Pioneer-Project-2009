@@ -13,8 +13,8 @@ OBJS    = ${SRCS:.cpp=.obj}
 DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
 # MacPort and Uni network paths
-INC     = -I/opt/local/include/player-3.1 \
-					-I/informatik/isr/tams/playerstage2.1.0rc1/include/player-2.1
+#INC     = -I/opt/local/include/player-3.1 \
+					#-I/informatik/isr/tams/playerstage2.1.0rc1/include/player-2.1
 
 TAGSRCS = /informatik/isr/tams/playerstage2.1.0rc1 stage_local
 
