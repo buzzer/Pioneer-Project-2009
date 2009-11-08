@@ -12,11 +12,7 @@ SRCS    = ${TARGET:=.cpp}
 OBJS    = ${SRCS:.cpp=.obj}
 DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
-# MacPort and Uni network paths
-#INC     = -I/opt/local/include/player-3.1 \
-					#-I/informatik/isr/tams/playerstage2.1.0rc1/include/player-2.1
-
-TAGSRCS = /informatik/isr/tams/playerstage2.1.0rc1 stage_local
+TAGSRCS = /usr/local/include/player-3.*/libplayerc++/
 
 CFLAGS  = -pg    \
           -Wall  \
@@ -28,13 +24,12 @@ CFLAGS  = -pg    \
 					-Wno-deprecated-declarations\
 					-Wdisabled-optimization\
 					-Wreturn-type -Wfatal-errors\
-					-Wmost\
 					-Wunused\
           -O2    \
           `pkg-config --cflags playerc++`
 LIBS    = `pkg-config --libs playerc++`
 
-.PHONY: all clean distclean tags
+.PHONY: all clean distclean tag doc docclean
 all: ${TARGET} 
 
 ${TARGET}: ${SRCS} Makefile
@@ -46,22 +41,22 @@ clean::
 distclean:: clean
 
 player:
-	player stage_local/simple.cfg
+	player stage_local/uhh.cfg
 
 playerp:
 	player stage_local/pioneer.cfg
 
 view:
-	playerv -p 6665 --position:0 --sonar:0 --laser:0
+	playerv -p 6665 --position:0 --laser:0
 
 run:
 	./${TARGET}
 
-tags:
+tag:
 	${CTAGS} -f ${TAGFILE} -R ${TAGSRCS}
 
-docs:
+doc:
 	doxygen
 
-docsclean:
+docclean:
 	rm -fr doc/doxygen/*

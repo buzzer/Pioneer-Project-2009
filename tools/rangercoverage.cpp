@@ -3,6 +3,8 @@
 #include <cstdlib>   // for srand and rand
 #include <ctime>     // for time
 
+#define DEBUG_LASER
+
 using namespace std;
 
 int main (void)
@@ -10,47 +12,43 @@ int main (void)
   const int maxAngle = 240;
   const int minAngle =   0;
   const double LPMAX = 5.0;
-  const double DEGSTEP = 0.3515625; // 360./1024. in degree perrIndexaserbeam
+  const double DEGPROBEAM = 0.3515625; // 360./1024. in degree perrIndexaserbeam
   const int UPIND = 682;
   double lp[UPIND];
-  int beamCount      = 1;
-  double beamSum     = 0.;
-  double averageDist = 0.;
-  double minDist     = LPMAX;
 
   std::cout.precision(2);
 
   srand(time(0));  // initialize seed "randomly"
 
   for (int i=0; i<UPIND; i++) {
-    lp[i] = (rand() % 500 + 111)/100;  // fill the array in order
-    //cout << i << "\t" <<rIndexp[i] << endl;
+    lp[i] = (rand() % 500 + 60)*0.01;  // fill the array in order
+    cout << i << "\t" << lp[i] << endl;
   }
 
-  while (true) {
-    // Measure minimum distance of each degree
-    for (int arc=minAngle, rIndex=0, rIndexOld=rIndex, beamCount=1;      // Init per degree values
-        arc < maxAngle;
-        arc++, beamSum=0.) // Reset per degree values
-    {
-      // Measure average distance of beams belonging to one degree
-      for (rIndex=(int)((double)arc/DEGSTEP), rIndexOld=rIndex;
-          rIndex<(int)((double)(arc+1)/DEGSTEP);
-          rIndex++)
-      {
-        beamSum += lp[rIndex];
+  {
+    const int minBIndex = (int)(minAngle/DEGPROBEAM); ///< Beam index of min deg.
+    const int maxBIndex = (int)(maxAngle/DEGPROBEAM); ///< Beam index of max deg.
+    const int BEAMCOUNT = 2; ///< Number of laser beams taken for one average distance measurement
+    double minDist     = LPMAX; ///< Min distance in the arc.
+    double sumDist     = 0.; ///< Sum of BEAMCOUNT beam's distance.
+    double averageDist = LPMAX; ///< Average of BEAMCOUNT beam's distance.
+
+    for (int beamIndex=minBIndex; beamIndex<maxBIndex; beamIndex++) {
+      sumDist += lp[beamIndex];
+      if((beamIndex-minBIndex) % BEAMCOUNT == 1) { ///< On each BEAMCOUNT's beam..
+        averageDist = sumDist/BEAMCOUNT; ///< Calculate the average distance.
+        sumDist = 0.; ///< Reset sum of beam average distance
+        // Calculate the minimum distance for the arc
+        averageDist<minDist ? minDist=averageDist : minDist;
       }
-      beamCount = rIndex-rIndexOld;
-      // Calculate the mean distance per degree
-      averageDist = (double)beamSum/beamCount;
-      // Calculate the minimum distance for the arc
-      averageDist<minDist ? minDist=averageDist : minDist;
 #ifdef DEBUG_LASER
-      std::cout << beamSum << "\t"
-        << rIndex << "\t"
-        << rIndexOld << "\t"
-        << beamCount << "\t"
-        << averageDist << std::endl;
+      cout
+        << BEAMCOUNT << "\t"
+        << beamIndex << "\t"
+        << lp[beamIndex] << "\t"
+        << sumDist << "\t"
+        << averageDist << "\t"
+        << minDist << endl;
 #endif
     }
   }

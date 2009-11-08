@@ -11,13 +11,15 @@
 
 using namespace PlayerCc;
 
-#define DEBUG_NO// Has to be set if any debug output wanted !!! {{{
+// {{{ DEBUG COMPILATION FLAGS
+#define DEBUG_NO///< Has to be set if any debug output wanted !!!
 #define DEBUG_STATE_NO
 #define DEBUG_CRIT_NO
 #define DEBUG_SONAR_NO
-#define DEBUG_LASER_NO
 #define DEBUG_DIST_NO
-#define DEBUG_POSITION_NO // }}}
+#define DEBUG_POSITION_NO
+#define LASER///< Uses sonar + laser if defined
+// }}}
 
 // Parameters {{{
 const double VEL       = 0.3;///< Normal_advance_speed in meters per sec.
@@ -33,7 +35,8 @@ const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance.
 const double WALLLOSTDIST  = 1.5; ///< Wall attractor.
 const double SHAPE_DIST = 0.3; ///< Min Radius from sensor for robot shape.
 // Laserranger
-const double DEGSTEP   = 0.3515625; ///< 360./1024. in degree per laserbeam
+const int BEAMCOUNT = 2; ///< Number of laser beams taken for one average distance measurement
+const double DEGPROBEAM   = 0.3515625; ///< 360./1024. in degree per laserbeam
 const int    LSRANGE   = 240; ///< Arc range of the Laser sensor in degrees
 const double LPMAX     = 5.0;  ///< max laser range in meters
 const double COS45     = 0.83867056795; ///< Cos(33);
@@ -53,7 +56,9 @@ const int RMIN  = 0;  /**< RIGHT min angle.      */ const int RMAX  = 65;  ///< 
 class Robot {
 private:
   PlayerClient    *robot;
+#ifdef LASER
   LaserProxy      *lp;
+#endif
   SonarProxy      *sp;
   Position2dProxy *pp;
   /// Current behaviour of the robot.
@@ -80,41 +85,34 @@ private:
   StateType currentState;
 
   /// Returns the minimum distance of the given arc.
-  /// Algorithm calculates the average of 2 or 3 beams
+  /// Algorithm calculates the average of BEAMCOUNT beams
   /// to define a minimum value per degree.
   /// @param Range of angle (degrees)
   /// @return Minimum distance in range
   inline double getDistanceLas ( int minAngle, int maxAngle )
   {
-    double sumDist     = 0.;
-    double averageDist = 0.;
-    double minDist     = LPMAX;
+    double minDist     = LPMAX; ///< Min distance in the arc.
+#ifdef LASER
+    if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=LSRANGE || maxAngle>LSRANGE) ) {
 
-    if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=LSRANGE || maxAngle>LSRANGE) )
-    {
-      // Measure minimum distance of each degree
-      for (int arc=minAngle, rIndex=0, rIndexOld=rIndex, beamCount=1;      // Init per degree values
-          arc < maxAngle;
-          arc++, sumDist=0.) // Reset per degree values
-      {
-        // Measure average distance of beams belonging to one degree
-        for (rIndex=(int)((double)arc/DEGSTEP), rIndexOld=rIndex;
-            rIndex<(int)((double)(arc+1)/DEGSTEP);
-            rIndex++)
-        {
-          sumDist += lp->GetRange(rIndex);
+      const int minBIndex = (int)(minAngle/DEGPROBEAM); ///< Beam index of min deg.
+      const int maxBIndex = (int)(maxAngle/DEGPROBEAM); ///< Beam index of max deg.
+      double sumDist     = 0.; ///< Sum of BEAMCOUNT beam's distance.
+      double averageDist = LPMAX; ///< Average of BEAMCOUNT beam's distance.
+
+      for (int beamIndex=minBIndex; beamIndex<maxBIndex; beamIndex++) {
+        sumDist += lp->GetRange(beamIndex);
+        if((beamIndex-minBIndex) % BEAMCOUNT == 1) { ///< On each BEAMCOUNT's beam..
+          averageDist = sumDist/BEAMCOUNT; ///< Calculate the average distance.
+          sumDist = 0.; ///< Reset sum of beam average distance
+          // Calculate the minimum distance for the arc
+          averageDist<minDist ? minDist=averageDist : minDist;
         }
-        beamCount = rIndex-rIndexOld;
-        // Calculate the mean distance per degree
-        averageDist = (double)sumDist/beamCount;
-        // Calculate the minimum distance for the arc
-        averageDist<minDist ? minDist=averageDist : minDist;
-#ifdef DEBUG_LASER  // {{{
-        std::cout << sumDist << "\t" << rIndex << "\t" << rIndexOld << "\t" << beamCount << "\t" << averageDist << std::endl;
-#endif  // }}}
       }
+
     }
-    return minDist;
+#endif
+  return minDist;
   }
 
   /// Returns the minimum distance of the given view direction.
@@ -263,13 +261,25 @@ public:
   Robot(std::string name, int address, int id) {
     robot = new PlayerClient(name, address);
     pp    = new Position2dProxy(robot, id);
+#ifdef LASER
     lp    = new LaserProxy(robot, id);
+#endif
     sp    = new SonarProxy(robot, id);
     robotID      = id;
     currentState = WALL_FOLLOWING;
+    pp->SetMotorEnable(true);
   }
 
-  void update ( void ) { robot->Read(); }
+  void update ( void ) {
+#ifdef LASER
+    while(lp->GetCount() == 0) {
+#endif
+      robot->Read(); ///< This blocks until new data comes; 10Hz by default
+#ifdef LASER
+      usleep(100000); ///< Wait x micro seconds for an update.
+    }
+#endif
+  }
   void plan ( void ) {
 #ifdef DEBUG_SONAR  // {{{
     std::cout << std::endl;
@@ -332,17 +342,12 @@ public:
 int main ( void ) {
   try {
     Robot pioneer0("localhost", 6665, 0);
-    Robot pioneer1("localhost", 6666, 0);
     std::cout.precision(2);
     while (true) {
       pioneer0.update();
-      pioneer1.update();
-
       pioneer0.plan();
-      pioneer1.plan();
-
       pioneer0.execute();
-      pioneer1.execute();
+      //usleep(100000); ///< Wait x micro seconds for an update.
     }
   } catch (PlayerCc::PlayerError e) {
     std::cerr << e << std::endl; // let's output the error

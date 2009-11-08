@@ -31,7 +31,6 @@ floorplan
 (
   size [16.000 16.000 0.800]
   pose [0 0 0 0]
-#  bitmap "bitmaps/prb.png"
   bitmap "bitmaps/tams_corr_orig_cut.png"
 )
 
@@ -42,17 +41,17 @@ pioneer2dx
   pose [ -7 -7 0 45 ] 
 
   urg_laser(
-    ctrl "lasernoise"
+    #ctrl "lasernoise"
   )
   platte()
   laptop()
 )
 
-pioneer2dx
-(		  
-  # can refer to the robot by this name
-  name "robot1"
-  pose [ 7 7 0 -135 ] 
+#pioneer2dx
+#(		  
+  ## can refer to the robot by this name
+  #name "robot1"
+  #pose [ 7 7 0 -135 ] 
 
-  urg_laser()
-)
+  #urg_laser()
+#)
