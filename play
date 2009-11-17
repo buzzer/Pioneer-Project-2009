@@ -1,0 +1,11 @@
+#!/bin/sh
+prefix="stage_local"
+world="uhh"
+
+player $prefix/$world.cfg & # Stage world
+sleep 1 # Wait for Stage world to come up
+if [ -z $# ] ; then
+  ./$1
+else
+  ./wallfollow
+fi
