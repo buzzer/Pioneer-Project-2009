@@ -584,7 +584,9 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = /Users/sebastian/projekt090406 /usr/local/include/player-3.1/libplayerc++/
+INPUT                  = /Users/sebastian/projekt090406 \
+                          /usr/local/include/player-3.1/libplayerc++/ \
+                          /usr/local/include/player-3.0/libplayerc++/
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
@@ -1285,7 +1287,9 @@ SEARCH_INCLUDES        = YES
 # contain include files that are not input files but should be processed by 
 # the preprocessor.
 
-INCLUDE_PATH           = /usr/local/include/player-3.1/ /Users/sebastian/.vim/tags/cpp_src/
+INCLUDE_PATH           = /usr/local/include/player-3.1/ \
+                          /usr/local/include/player-3.0/ \
+                          /Users/sebastian/.vim/tags/cpp_src/
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard 
 # patterns (like *.h and *.hpp) to filter out the header-files in the 

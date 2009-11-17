@@ -56,6 +56,8 @@ tag:
 	${CTAGS} -f ${TAGFILE} -R ${TAGSRCS}
 
 doc:
+	mkdir doc/doxygen/html
+	cp tools/PioneerShape.png doc/doxygen/html
 	doxygen
 
 docclean:

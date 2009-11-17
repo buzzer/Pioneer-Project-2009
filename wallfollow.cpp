@@ -1,8 +1,21 @@
-/// @file wallfollow.cpp
+/// @file wallfollowing.cpp
 /// @author Sebastian Rockel
-/// @mainpage Robotic Project
+///
+/// @mainpage Robotic Project 2009
+///
+/// @par Copyright
+/// Copyright (C) 2009 Sebastian Rockel.
+/// This program can be distributed and modified under the condition mentioning
+/// the @ref author.
+///
+/// @par Description
 /// Wall following example for Pioneer 2DX robot.
 /// This is part of the robotics students project at Uni Hamburg in 2009.
+///
+/// @par Sensor fusion
+/// The program depends on sensor fusion of 16 sonar rangers and a 240 degree
+/// urg laser ranger.
+/// @image html PioneerShape.png "Overview about how laser and sonar sensors are fused"
 #ifdef DEBUG  // {{{
 #include <iostream>
 #endif  // }}}
@@ -91,8 +104,8 @@ private:
   /// @return Minimum distance in range
   inline double getDistanceLas ( int minAngle, int maxAngle )
   {
-    double minDist     = LPMAX; ///< Min distance in the arc.
-    double lMaxAngle = lp->GetMaxAngle();
+    double minDist         = LPMAX; ///< Min distance in the arc.
+    const double lMaxAngle = (lp->GetMaxAngle()*180)/M_PI*2; ///< Laser max angle in degree
 #ifdef LASER
     if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=lMaxAngle || maxAngle>lMaxAngle) ) {
 
