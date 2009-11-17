@@ -2,16 +2,17 @@
 include "pioneer.inc"
 include "map.inc"
 include "urg.inc"
+#include "sick.inc"
 include "platte.inc"
 include "laptop.inc"
 
-interval_sim 100  # simulation timestep in milliseconds
-interval_real 20  # real-time interval between simulation updates in milliseconds 
+#interval_sim 100  # simulation timestep in milliseconds
+#interval_real 20  # real-time interval between simulation updates in milliseconds 
 
 # time to pause (in GUI mode) or quit (in headless mode (-g)) the simulation
 quit_time 3600 # 1 hour of simulated time
 
-paused 0
+paused 1
 
 resolution 0.02
 
@@ -37,21 +38,13 @@ floorplan
 pioneer2dx
 (		  
   # can refer to the robot by this name
-  name "robot0"
+  name "r0"
   pose [ -7 -7 0 45 ] 
 
   urg_laser(
+  #sicklaser(
     #ctrl "lasernoise"
   )
   platte()
   laptop()
 )
-
-#pioneer2dx
-#(		  
-  ## can refer to the robot by this name
-  #name "robot1"
-  #pose [ 7 7 0 -135 ] 
-
-  #urg_laser()
-#)

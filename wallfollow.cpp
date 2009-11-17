@@ -18,6 +18,7 @@ using namespace PlayerCc;
 #define DEBUG_SONAR_NO
 #define DEBUG_DIST_NO
 #define DEBUG_POSITION_NO
+#define DEBUG_LASER_NO
 #define LASER///< Uses sonar + laser if defined
 // }}}
 
@@ -37,7 +38,6 @@ const double SHAPE_DIST = 0.3; ///< Min Radius from sensor for robot shape.
 // Laserranger
 const int BEAMCOUNT = 2; ///< Number of laser beams taken for one average distance measurement
 const double DEGPROBEAM   = 0.3515625; ///< 360./1024. in degree per laserbeam
-const int    LSRANGE   = 240; ///< Arc range of the Laser sensor in degrees
 const double LPMAX     = 5.0;  ///< max laser range in meters
 const double COS45     = 0.83867056795; ///< Cos(33);
 const double INV_COS45 = 1.19236329284; ///< 1/COS45
@@ -92,8 +92,9 @@ private:
   inline double getDistanceLas ( int minAngle, int maxAngle )
   {
     double minDist     = LPMAX; ///< Min distance in the arc.
+    double lMaxAngle = lp->GetMaxAngle();
 #ifdef LASER
-    if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=LSRANGE || maxAngle>LSRANGE) ) {
+    if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=lMaxAngle || maxAngle>lMaxAngle) ) {
 
       const int minBIndex = (int)(minAngle/DEGPROBEAM); ///< Beam index of min deg.
       const int maxBIndex = (int)(maxAngle/DEGPROBEAM); ///< Beam index of max deg.
@@ -108,6 +109,13 @@ private:
           // Calculate the minimum distance for the arc
           averageDist<minDist ? minDist=averageDist : minDist;
         }
+#ifdef DEBUG_LASER // {{{
+        usleep(1000); ///< Wait x micro seconds for an update.
+        std::cout << "beamInd: " << beamIndex
+          << "\tsumDist: " << sumDist
+          << "\taveDist: " << averageDist
+          << "\tminDist: " << minDist << std::endl;
+#endif // }}}
       }
 
     }
@@ -270,17 +278,10 @@ public:
     pp->SetMotorEnable(true);
   }
 
-  void update ( void ) {
-#ifdef LASER
-    while(lp->GetCount() == 0) {
-#endif
+  inline void update ( void ) {
       robot->Read(); ///< This blocks until new data comes; 10Hz by default
-#ifdef LASER
-      usleep(100000); ///< Wait x micro seconds for an update.
-    }
-#endif
   }
-  void plan ( void ) {
+  inline void plan ( void ) {
 #ifdef DEBUG_SONAR  // {{{
     std::cout << std::endl;
     for(int i=0; i< 16; i++)
@@ -336,18 +337,20 @@ public:
 #endif  // }}}
   }
   // Command the motors
-  void execute() { pp->SetSpeed(speed, turnrate); }
+  inline void execute() { pp->SetSpeed(speed, turnrate); }
+  void go() {
+    this->update();
+    this->plan();
+    this->execute();
+  }
 }; // Class Robot
 
 int main ( void ) {
   try {
-    Robot pioneer0("localhost", 6665, 0);
+    Robot r0("localhost", 6665, 0);
     std::cout.precision(2);
     while (true) {
-      pioneer0.update();
-      pioneer0.plan();
-      pioneer0.execute();
-      //usleep(100000); ///< Wait x micro seconds for an update.
+      r0.go();
     }
   } catch (PlayerCc::PlayerError e) {
     std::cerr << e << std::endl; // let's output the error
