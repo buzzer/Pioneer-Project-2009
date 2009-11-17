@@ -41,7 +41,7 @@ clean::
 distclean:: clean
 
 player:
-	player stage_local/uhh.cfg
+	./play
 
 playerp:
 	player stage_local/pioneer.cfg
