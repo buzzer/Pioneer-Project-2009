@@ -13,6 +13,7 @@ OBJS    = ${SRCS:.cpp=.obj}
 DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
 TAGSRCS = /usr/local/include/player-3.*/libplayerc++/
+HOSTTARGET= "tams67:projekt090406/" # to sync target
 
 CFLAGS  = -pg    \
           -Wall  \
@@ -29,7 +30,7 @@ CFLAGS  = -pg    \
           `pkg-config --cflags playerc++`
 LIBS    = `pkg-config --libs playerc++`
 
-.PHONY: all clean distclean tag doc docclean
+.PHONY: all clean player playerp view run tag doc docclean sync
 all: ${TARGET} 
 
 ${TARGET}: ${SRCS} Makefile
@@ -38,13 +39,11 @@ ${TARGET}: ${SRCS} Makefile
 clean::
 	-rm -f ${TARGET} ${TAGFILE}
 
-distclean:: clean
-
 player:
-	./play
+	./stage # Start the player server and stage simulation
 
 playerp:
-	player stage_local/pioneer.cfg
+	./real # Start the player server on real pioneer
 
 view:
 	playerv -p 6665 --position:0 --laser:0
@@ -62,3 +61,10 @@ doc:
 
 docclean:
 	rm -fr doc/doxygen/*
+
+sync:
+	scp Makefile ${HOSTTARGET}
+	scp real ${HOSTTARGET}
+	scp stage ${HOSTTARGET}
+	scp wallfollow.cpp ${HOSTTARGET}
+	scp -r stage_local ${HOSTTARGET}

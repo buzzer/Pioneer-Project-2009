@@ -26,12 +26,11 @@ using namespace PlayerCc;
 
 // {{{ DEBUG COMPILATION FLAGS
 #define DEBUG_NO///< Has to be set if any debug output wanted !!!
-#define DEBUG_STATE_NO
-#define DEBUG_CRIT_NO
-#define DEBUG_SONAR_NO
-#define DEBUG_DIST_NO
-#define DEBUG_POSITION_NO
-#define DEBUG_LASER_NO
+#define DEBUG_STATE_NO///< Output of the robot's internal state
+#define DEBUG_SONAR_NO///< Output of sonar readings
+#define DEBUG_DIST_NO///< Output of all (fused) ranger readings
+#define DEBUG_POSITION_NO///< Output of the robot's odometry readings
+#define DEBUG_LASER_NO///< Output of laser readings
 #define LASER///< Uses sonar + laser if defined
 // }}}
 
@@ -49,6 +48,7 @@ const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance.
 const double WALLLOSTDIST  = 1.5; ///< Wall attractor.
 const double SHAPE_DIST = 0.3; ///< Min Radius from sensor for robot shape.
 // Laserranger
+const double LMAXANGLE = 240; ///< Laser max angle in degree
 const int BEAMCOUNT = 2; ///< Number of laser beams taken for one average distance measurement
 const double DEGPROBEAM   = 0.3515625; ///< 360./1024. in degree per laserbeam
 const double LPMAX     = 5.0;  ///< max laser range in meters
@@ -70,7 +70,7 @@ class Robot {
 private:
   PlayerClient    *robot;
 #ifdef LASER
-  LaserProxy      *lp;
+  RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
 #endif
   SonarProxy      *sp;
   Position2dProxy *pp;
@@ -105,9 +105,9 @@ private:
   inline double getDistanceLas ( int minAngle, int maxAngle )
   {
     double minDist         = LPMAX; ///< Min distance in the arc.
-    const double lMaxAngle = (lp->GetMaxAngle()*180)/M_PI*2; ///< Laser max angle in degree
+    double distCurr        = LPMAX; ///< Current distance of a laser beam
 #ifdef LASER
-    if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=lMaxAngle || maxAngle>lMaxAngle) ) {
+    if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=LMAXANGLE || maxAngle>LMAXANGLE ) ) {
 
       const int minBIndex = (int)(minAngle/DEGPROBEAM); ///< Beam index of min deg.
       const int maxBIndex = (int)(maxAngle/DEGPROBEAM); ///< Beam index of max deg.
@@ -115,7 +115,9 @@ private:
       double averageDist = LPMAX; ///< Average of BEAMCOUNT beam's distance.
 
       for (int beamIndex=minBIndex; beamIndex<maxBIndex; beamIndex++) {
-        sumDist += lp->GetRange(beamIndex);
+        distCurr = lp->GetRange(beamIndex);
+        distCurr<0.02 ? sumDist+=LPMAX : sumDist+=distCurr;
+        //sumDist += lp->GetRange(beamIndex);
         if((beamIndex-minBIndex) % BEAMCOUNT == 1) { ///< On each BEAMCOUNT's beam..
           averageDist = sumDist/BEAMCOUNT; ///< Calculate the average distance.
           sumDist = 0.; ///< Reset sum of beam average distance
@@ -123,14 +125,12 @@ private:
           averageDist<minDist ? minDist=averageDist : minDist;
         }
 #ifdef DEBUG_LASER // {{{
-        usleep(1000); ///< Wait x micro seconds for an update.
         std::cout << "beamInd: " << beamIndex
           << "\tsumDist: " << sumDist
           << "\taveDist: " << averageDist
           << "\tminDist: " << minDist << std::endl;
 #endif // }}}
       }
-
     }
 #endif
   return minDist;
@@ -283,7 +283,7 @@ public:
     robot = new PlayerClient(name, address);
     pp    = new Position2dProxy(robot, id);
 #ifdef LASER
-    lp    = new LaserProxy(robot, id);
+    lp    = new RangerProxy(robot, id);
 #endif
     sp    = new SonarProxy(robot, id);
     robotID      = id;
