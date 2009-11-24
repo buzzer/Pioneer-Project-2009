@@ -14,6 +14,8 @@ DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
 TAGSRCS = /usr/local/include/player-3.*/libplayerc++/
 HOSTTARGET= "tams67:projekt090406/" # to sync target
+TMPDIR  = ./PlayerSource
+TARFILE = PlayerSource.tgz
 
 CFLAGS  = -pg    \
           -Wall  \
@@ -37,7 +39,9 @@ ${TARGET}: ${SRCS} Makefile
 	${CC} -o ${TARGET} ${INC} ${CFLAGS} ${SRCS} ${LIBS}
 
 clean::
-	-rm -f ${TARGET} ${TAGFILE}
+	rm -f ${TARGET} ${TAGFILE}
+	rm -fr ${TMPDIR}
+	rm -fr ${TARFILE}
 
 player:
 	./stage # Start the player server and stage simulation
@@ -66,3 +70,13 @@ sync:
 	scp stage ${HOSTTARGET}
 	scp wallfollow.cpp ${HOSTTARGET}
 	scp -r stage_local ${HOSTTARGET}
+
+public:
+	mkdir ${TMPDIR}
+	cp Makefile ${TMPDIR}
+	cp real ${TMPDIR}
+	cp stage ${TMPDIR}
+	cp wallfollow.cpp ${TMPDIR}
+	cp -r stage_local ${TMPDIR}
+	tar -czvf ${TARFILE} ${TMPDIR}/*
+	rm -fr ${TMPDIR}
