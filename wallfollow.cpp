@@ -16,6 +16,7 @@
 /// The program depends on sensor fusion of 16 sonar rangers and a 240 degree
 /// urg laser ranger.
 /// @image html PioneerShape.png "Overview about how laser and sonar sensors are fused"
+/// @image html AngleDefinition.png "Calculating turning angle via the atan function"
 #ifdef DEBUG  // {{{
 #include <iostream>
 #endif  // }}}
