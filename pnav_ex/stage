@@ -1,0 +1,11 @@
+#!/bin/sh
+
+world=${1}  # Get Stage world as parameter
+
+player ${world}_stage.cfg & # Start Stage world
+
+sleep 2 # Wait for Stage world to come up
+
+player -q ${world}_navloc.cfg & # Localization and Path planning
+
+# playernav # Run playernav on a remote machine

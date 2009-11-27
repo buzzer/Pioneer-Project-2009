@@ -1,6 +1,7 @@
 # Makefile for the Pioneer Projekt
 # Shall be compatible with Uni Network and my local Mac!
 # V 0.9
+# by Sebastian Rockel
 # 2009-05-25
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #
@@ -13,7 +14,7 @@ OBJS    = ${SRCS:.cpp=.obj}
 DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
 TAGSRCS = /usr/local/include/player-3.*/libplayerc++/
-HOSTTARGET= "tams67:projekt090406/" # to sync target
+HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
 TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
 
@@ -70,6 +71,8 @@ sync:
 	scp stage ${HOSTTARGET}
 	scp wallfollow.cpp ${HOSTTARGET}
 	scp -r stage_local ${HOSTTARGET}
+	scp -r pnav_ex ${HOSTTARGET}
+	scp -r tams ${HOSTTARGET}
 
 public:
 	mkdir ${TMPDIR}

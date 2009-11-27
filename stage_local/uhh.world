@@ -39,7 +39,7 @@ pioneer2dx
 (		  
   # can refer to the robot by this name
   name "r0"
-  pose [ -7 -7 0 45 ] 
+  pose [ -7 -7 0 90 ] 
 
   urg_laser(
   #sicklaser(
