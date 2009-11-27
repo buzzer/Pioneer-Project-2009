@@ -14,7 +14,7 @@ quit_time 3600 # 1 hour of simulated time
 
 paused 1
 
-resolution 0.02
+resolution 0.0208
 
 # configure the GUI window
 window
@@ -32,7 +32,7 @@ floorplan
 (
   size [16.000 16.000 0.800]
   pose [0 0 0 0]
-  bitmap "bitmaps/tams_corr_orig_cut.png"
+  bitmap "bitmaps/tams_corr_orig_cut_q.png"
 )
 
 pioneer2dx
