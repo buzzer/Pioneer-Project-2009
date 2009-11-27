@@ -56,6 +56,9 @@ view:
 run:
 	./${TARGET}
 
+slam:
+	pmaptest --num_samples 100 --grid_width 16 --grid_height 16 --grid_scale 0.08 --laser_x 0.13 --robot_x -7 --robot_y -7 --robot_rot 90 ${LOGFILE}
+
 tag:
 	${CTAGS} -f ${TAGFILE} -R ${TAGSRCS}
 
