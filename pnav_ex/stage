@@ -4,21 +4,31 @@ TamsCSWait=80 # Seconds to wait for tams c-space generation
 DefStageWait=2 # Seconds to wait for Stage world to come up
 
 world=${1}  # Get Stage world as parameter
+# Check wether logging shall be done
+if [ ! -z ${2} ] ; then
+  logEnable=${2}
+else
+  logEnable="NOPARAM"
+fi
 
-if [ $world == "tams" ] ; then
+if [ $world = "tams" ] ; then
   CSWait=$TamsCSWait
 else
   CSWait=$DefCSWait
 fi
-echo "Playernav start delayed $CSWait seconds to wait for C-Space generation."
+echo "=Playernav start delayed $CSWait seconds to wait for C-Space generation."
 
-player ${world}_stage.cfg & # Start Stage world
+player -p 6666 ${world}_stage.cfg & # Start Stage world
 
 sleep $DefStageWait # Wait for Stage world to come up
-#player -q writelog.cfg & # Start writelog driver
-player -q ${world}_navloc.cfg & # Localization and Path planning
+player -p 6665 -q ${world}_navloc.cfg & # Localization and Path planning
+if [ $logEnable = "LOGTRUE" ] ; then
+  echo "=Logging enabled!"
+  player -p 6667 -q writelog.cfg & # Start writelog driver
+fi
 
 sleep $CSWait # Wait for Wavefront driver's C-Space creation
 playernav # Run playernav on a remote machine
 
+echo "=Now kill remaining player background instances.."
 killall player # Kill player processes in background

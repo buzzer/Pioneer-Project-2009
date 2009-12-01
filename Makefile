@@ -34,7 +34,24 @@ CFLAGS  = -pg    \
 LIBS    = `pkg-config --libs playerc++`
 
 .PHONY: all clean player playerp view run tag doc docclean sync
-all: ${TARGET} 
+#all: ${TARGET} 
+all:
+	@echo
+	@echo "make comp\t-- Wallfollow compilation"
+	@echo "make clean\t-- Clean objects"
+	@echo "make player\t-- Start the player server and stage simulation"
+	@echo "make playerp\t-- Start the player server on real pioneer"
+	@echo "make view\t-- Start playerv for sensor data"
+	@echo "make run\t-- Start wallfollow program"
+	@echo "make slam LOGFILE=<logfile>\t-- Start pmaptest creating a grid map"
+	@echo "make tag\t-- Create tags for VIM"
+	@echo "make doc\t-- Create doxygen manual for wallfollowing program"
+	@echo "make docclean\t-- Clean doxygen manual and files"
+	@echo "make sync\t-- Sync mandatory wallfollowing files onto robot laptop"
+	@echo "make public\t-- Create a zip archive from mandatory wallfollowing files"
+	@echo
+
+comp: ${TARGET}
 
 ${TARGET}: ${SRCS} Makefile
 	${CC} -o ${TARGET} ${INC} ${CFLAGS} ${SRCS} ${LIBS}
