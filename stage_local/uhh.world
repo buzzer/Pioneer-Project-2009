@@ -14,7 +14,8 @@ quit_time 3600 # 1 hour of simulated time
 
 paused 1
 
-resolution 0.0208
+#resolution 0.0208
+resolution 0.021
 
 # configure the GUI window
 window

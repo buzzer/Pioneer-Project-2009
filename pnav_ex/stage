@@ -25,6 +25,8 @@ player -p 6665 -q ${world}_navloc.cfg & # Localization and Path planning
 if [ $logEnable = "LOGTRUE" ] ; then
   echo "=Logging enabled!"
   player -p 6667 -q writelog.cfg & # Start writelog driver
+  sleep 1
+  playervcr -p 6667 & # Start logging controller
 fi
 
 sleep $CSWait # Wait for Wavefront driver's C-Space creation
