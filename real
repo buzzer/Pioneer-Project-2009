@@ -2,8 +2,11 @@
 # Start player server an program on real pioneer
 prefix="stage_local"
 world="pioneer"
+writelogcfg="writelog.cfg"
 
-player $prefix/$world.cfg & # Stage world
+player -p 6665 $prefix/$world.cfg & # Stage world
+sleep 2
+player -q -p 6666 $prefix/$writelogcfg & # Logging
 sleep 2 # Wait for Stage world to come up
 if [ -z $# ] ; then
   ./$1

@@ -34,10 +34,10 @@ CFLAGS  = -pg    \
 LIBS    = `pkg-config --libs playerc++`
 
 .PHONY: all clean player playerp view run tag doc docclean sync
-#all: ${TARGET} 
+
 all:
 	@echo
-	@echo "make comp\t-- Wallfollow compilation"
+	@echo "make wallfollow\t-- Wallfollow compilation"
 	@echo "make clean\t-- Clean objects"
 	@echo "make player\t-- Start the player server and stage simulation"
 	@echo "make playerp\t-- Start the player server on real pioneer"
@@ -51,7 +51,7 @@ all:
 	@echo "make public\t-- Create a zip archive from mandatory wallfollowing files"
 	@echo
 
-comp: ${TARGET}
+#wallfollow: ${TARGET}
 
 ${TARGET}: ${SRCS} Makefile
 	${CC} -o ${TARGET} ${INC} ${CFLAGS} ${SRCS} ${LIBS}

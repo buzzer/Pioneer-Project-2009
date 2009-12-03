@@ -1,8 +1,9 @@
 #!/bin/sh
 prefix="stage_local"
 world="uhh"
+pport=6665 # Player port
 
-player $prefix/$world.cfg & # Stage world
+player -p $pport $prefix/$world.cfg & # Stage world
 sleep 2 # Wait for Stage world to come up
 if [ -z $# ] ; then
   ./$1
