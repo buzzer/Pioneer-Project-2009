@@ -14,7 +14,6 @@ quit_time 3600 # 1 hour of simulated time
 
 paused 1
 
-#resolution 0.0208
 resolution 0.021
 
 # configure the GUI window
@@ -33,14 +32,16 @@ floorplan
 (
   size [16.000 16.000 0.800]
   pose [0 0 0 0]
-  bitmap "bitmaps/tams_corr_orig_cut_q.png"
+  #bitmap "bitmaps/tams_corr_orig_cut_q.png"
+  bitmap "bitmaps/racetrack.png"
 )
 
 pioneer2dx
 (		  
   # can refer to the robot by this name
   name "r0"
-  pose [ -7 -7 0 90 ] 
+  #pose [ -7 -7 0 90 ] 
+  pose [ -6 -5 0 90 ] 
 
   urg_laser(
   #sicklaser(
