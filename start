@@ -1,0 +1,34 @@
+#!/bin/sh
+# Eases to start the different player instances
+#
+# @param $1: player cfg file
+# @param $2: robot program
+#
+prefix="stage_local" # player/stage config files
+DefStageWait=2 # Seconds to wait for Stage world to come up
+PlaPort=6665 # Player port
+LogPort=6667
+
+if [ $1 = "-h" ] ; then
+  echo "\nUsage: `basename $0` [playerconfig] [robotprogram]\n"
+  exit 0
+elif [ ! -z $1 ] ; then
+  world=$1
+else
+  world="uhh"
+fi
+
+player -p $PlaPort $prefix/$world.cfg & # Stage world
+sleep $DefStageWait # Wait for Stage world to come up
+player -p $LogPort -q $prefix/writelog.cfg & # Start writelog driver
+sleep 1
+playervcr -p $LogPort & # Start logging controller
+
+if [ ! -z $2 ] ; then
+  ./$2
+else
+  ./wallfollow
+fi
+
+echo "=Now kill remaining player background instances.."
+killall player # Kill player processes in background

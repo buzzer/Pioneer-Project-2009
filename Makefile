@@ -2,7 +2,7 @@
 # Shall be compatible with Uni Network and my local Mac!
 # V 0.9
 # by Sebastian Rockel
-# 2009-05-25
+# 2009-12-11
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #
 CC      = g++
@@ -29,7 +29,6 @@ CFLAGS  = -pg    \
 					-Wdisabled-optimization\
 					-Wreturn-type -Wfatal-errors\
 					-Wunused\
-          -O2    \
           `pkg-config --cflags playerc++`
 LIBS    = `pkg-config --libs playerc++`
 
@@ -51,8 +50,6 @@ all:
 	@echo "make public\t-- Create a zip archive from mandatory wallfollowing files"
 	@echo
 
-#wallfollow: ${TARGET}
-
 ${TARGET}: ${SRCS} Makefile
 	${CC} -o ${TARGET} ${INC} ${CFLAGS} ${SRCS} ${LIBS}
 
@@ -62,10 +59,10 @@ clean::
 	rm -fr ${TARFILE}
 
 player:
-	./stage # Start the player server and stage simulation
+	./start uhh wallfollow # Start the player server and stage simulation
 
 playerp:
-	./real # Start the player server on real pioneer
+	./start pioneer wallfollow  # Start the player server on real pioneer
 
 view:
 	playerv -p 6665 --position:0 --laser:0
@@ -86,20 +83,20 @@ docclean:
 	rm -fr doc/doxygen/*
 
 sync:
-	scp Makefile ${HOSTTARGET}
-	scp real ${HOSTTARGET}
-	scp stage ${HOSTTARGET}
-	scp wallfollow.cpp ${HOSTTARGET}
-	scp -r stage_local ${HOSTTARGET}
-	scp -r pnav_ex ${HOSTTARGET}
-	scp -r tams ${HOSTTARGET}
+	@scp Makefile ${HOSTTARGET}
+	@scp start ${HOSTTARGET}
+	@scp wallfollow.cpp ${HOSTTARGET}
+	@scp -r stage_local ${HOSTTARGET}
+	@scp -r pnav_ex ${HOSTTARGET}
+	@scp -r tams ${HOSTTARGET}
+	@echo "\nCopied files to ${HOSTTARGET}\n"
 
 public:
-	mkdir ${TMPDIR}
-	cp Makefile ${TMPDIR}
-	cp real ${TMPDIR}
-	cp stage ${TMPDIR}
-	cp wallfollow.cpp ${TMPDIR}
-	cp -r stage_local ${TMPDIR}
-	tar -czvf ${TARFILE} ${TMPDIR}/*
-	rm -fr ${TMPDIR}
+	@mkdir ${TMPDIR}
+	@cp Makefile ${TMPDIR}
+	@cp start ${TMPDIR}
+	@cp wallfollow.cpp ${TMPDIR}
+	@cp -r stage_local ${TMPDIR}
+	@tar -czvf ${TARFILE} ${TMPDIR}/*
+	@rm -fr ${TMPDIR}
+	@echo "\nCreated archive ${TARFILE}\n"

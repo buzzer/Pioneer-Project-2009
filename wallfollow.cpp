@@ -19,6 +19,7 @@
 /// @image html AngleDefinition.png "Calculating turning angle via the atan function"
 #ifdef DEBUG  // {{{
 #include <iostream>
+#include <cstdlib>   // for srand and rand
 #endif  // }}}
 #include <cmath>
 #include <libplayerc++/playerc++.h>
@@ -26,8 +27,8 @@
 using namespace PlayerCc;
 
 // {{{ DEBUG COMPILATION FLAGS
-#define DEBUG_NO///< Has to be set if any debug output wanted !!!
-#define DEBUG_STATE_NO///< Output of the robot's internal state
+#define DEBUG///< Has to be set if any debug output wanted !!!
+#define DEBUG_STATE///< Output of the robot's internal state
 #define DEBUG_SONAR_NO///< Output of sonar readings
 #define DEBUG_DIST_NO///< Output of all (fused) ranger readings
 #define DEBUG_POSITION_NO///< Output of the robot's odometry readings
@@ -72,6 +73,7 @@ private:
   PlayerClient    *robot;
 #ifdef LASER
   RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
+  //LaserProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
 #endif
   SonarProxy      *sp;
   Position2dProxy *pp;
@@ -79,7 +81,8 @@ private:
   enum StateType {  // {{{
     WALL_FOLLOWING,
     COLLISION_AVOIDANCE,
-    WALL_SEARCHING
+    WALL_SEARCHING,
+    BALL_TRACKING
   };  // }}}
   /// Used for simple range area distinction.
   enum viewDirectType { // {{{
@@ -93,10 +96,12 @@ private:
     RIGHTREAR,
     ALL
   };  // }}}
-  int       robotID;
-  double    speed;
-  double    turnrate, tmp_turnrate;
-  StateType currentState;
+  int       robotID; ///< Global robot identifier
+  double    speed; ///< Current robot speed
+  double    turnrate; ///< Current robot turnrate
+  double    tmp_turnrate; ///< Used for behavior turnrate fusion
+  double    trackTurnrate; ///< Zero or tracking the ball turnrate
+  StateType currentState; ///< Current robot state
 
   /// Returns the minimum distance of the given arc.
   /// Algorithm calculates the average of BEAMCOUNT beams
@@ -285,6 +290,7 @@ public:
     pp    = new Position2dProxy(robot, id);
 #ifdef LASER
     lp    = new RangerProxy(robot, id);
+    //lp    = new LaserProxy(robot, id);
 #endif
     sp    = new SonarProxy(robot, id);
     robotID      = id;
@@ -301,8 +307,15 @@ public:
     for(int i=0; i< 16; i++)
       std::cout << "Sonar " << i << ": " << sp->GetScan(i) << std::endl;
 #endif  // }}}
-    // (Left) Wall following
-    turnrate = wallfollow(&currentState);
+    if ( trackTurnrate == 0 ) { ///< Check if ball is not detected in camera FOV
+      // (Left) Wall following
+      turnrate = wallfollow(&currentState);
+    } else {
+      // Track the ball
+      currentState = BALL_TRACKING;
+      std::cout << "BALL_TRACKING" << std::endl;
+      turnrate = trackTurnrate;
+    }
 
     // Collision avoidance overrides wall follow turnrate if neccessary!
     collisionAvoid(&turnrate,
@@ -350,21 +363,109 @@ public:
     std::cout << pp->GetXPos() << "\t" << pp->GetYPos() << "\t" << rtod(pp->GetYaw()) << std::endl;
 #endif  // }}}
   }
-  // Command the motors
+  /// Command the motors
   inline void execute() { pp->SetSpeed(speed, turnrate); }
   void go() {
     this->update();
     this->plan();
     this->execute();
   }
+  /// Set turnrate in radians
+  /// @param Turnrate in radians, '0' will do wall follow
+  /// @todo Make thread safe
+  void setTurnrate( double vl_turnrate ) { trackTurnrate = vl_turnrate; }
+  /// Get turnrate in radians
+  /// @todo Make thread safe
+  double getTurnrate ( void ) { return turnrate; }
 }; // Class Robot
+//=================
+typedef struct ts_Ball {
+  int num;
+  double dist;
+  double angle;
+};
+/// Simulation of the camera's driver call
+ts_Ball * DUMMY_getBallInfo ( void ) {
+  static ts_Ball ballInfo;
 
+  srand(time(0));  // initialize seed "randomly"
+
+  ballInfo.dist = 1.;
+  // Test random ball angles
+  ballInfo.angle = fmod( rand()*0.01, 2*M_PI ) - M_PI;
+
+  return &ballInfo;
+}
+/// Abstraction layer between robot and camera.
+/// Gets goal coordinates from camera device and directs the robot to it
+/// accordingly.
+/// Camera functions are called in here.
+/// @param Pointer to robot of type @ref Robot to command.
+void trackBall (Robot * robot)
+{
+  ts_Ball * ballInfo; // Pointer to the ball coordinates from camera
+  double vl_turnrate = 0.; // Local calculated robot write turnrate
+  double curTurnrate = 0.; // Current robot read turnrate
+  static double robPrevTurnrate = 0.; // Last turnrate before this one
+  time_t curTime; // Current system time
+  const time_t BALLTIMEOUT = 5; // Seconds
+  const time_t BALLREQINT  = 2; // Seconds
+  static time_t lastFound = 0; // Time when ball was last found
+  static time_t lastBallReq = 0; // Time when ball was last searched
+
+  curTime = time(NULL); // Get current time
+  curTurnrate = robot->getTurnrate(); // Get current turnrate
+
+  std::cout << "Turnrate time/curr./prev.:\t"
+    << curTime << "\t"
+    << curTurnrate << "\t"
+    << robPrevTurnrate << std::endl;
+
+  // Read the camera processed ball coordinates
+  // Only once each BALLREQINT
+  if(curTime-lastBallReq >= BALLREQINT)
+  {
+    ballInfo = DUMMY_getBallInfo(); // Call the camera driver
+
+    std::cout << "Ball time/dist./angle:\t"
+      << curTime << "\t"
+      << ballInfo->dist << "\t"
+      << ballInfo->angle << std::endl;
+
+    lastBallReq = curTime;
+
+    if(ballInfo->dist == 0) { // Check if no ball is found
+      if(curTime-lastFound <= BALLTIMEOUT) {// Check if ball was found previously
+        // Calculate the remaining guessed turnrate
+        vl_turnrate = robPrevTurnrate - (curTurnrate - robPrevTurnrate);
+      } else {
+        vl_turnrate = 0.; // robot will do wall follow instead
+      }
+    } else { // A ball has been found
+      lastFound = curTime;
+      // Normalize to +/- 180 degrees
+      vl_turnrate = fmod( ( ballInfo->angle + curTurnrate ), M_PI);
+    }
+
+    if( curTime-lastFound > BALLTIMEOUT )
+      vl_turnrate = 0; // Let the robot to default task again
+
+  } else {
+      // Keep with the current turnrate
+      vl_turnrate = curTurnrate;
+  }
+  robPrevTurnrate = curTurnrate; // Remember turnrate for next cycle
+  // Give the robot a new target, '0' for doing default task
+  robot->setTurnrate(vl_turnrate);
+}
+//=================
 int main ( void ) {
   try {
     Robot r0("localhost", 6665, 0);
     std::cout.precision(2);
     while (true) {
       r0.go();
+      trackBall(&r0); ///< Let the robot trace the ball if any
     }
   } catch (PlayerCc::PlayerError e) {
     std::cerr << e << std::endl; // let's output the error
