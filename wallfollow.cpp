@@ -379,7 +379,7 @@ public:
   double getTurnrate ( void ) { return turnrate; }
 }; // Class Robot
 //=================
-typedef struct ts_Ball {
+struct ts_Ball {
   int num;
   double dist;
   double angle;

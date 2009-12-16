@@ -19,11 +19,11 @@ TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
 
 CFLAGS  = -pg    \
+					-funit-at-a-time \
           -Wall  \
 					-Wcast-align\
 					-Waggregate-return \
 					-Wcast-qual\
-					-Wconversion\
 					-Wcomment\
 					-Wno-deprecated-declarations\
 					-Wdisabled-optimization\
