@@ -43,8 +43,8 @@ all:
 	@echo "make player\t-- Start the player server and stage simulation"
 	@echo "make playerp\t-- Start the player server on real pioneer"
 	@echo "make view\t-- Start playerv for sensor data"
-	@echo "make run\t-- Start wallfollow program"
 	@echo "make slam LOGFILE=<logfile>\t-- Start pmaptest creating a grid map"
+	@echo "make debug\t-- Start debugger ddd with wallfollow"
 	@echo "make tag\t-- Create tags for VIM"
 	@echo "make doc\t-- Create doxygen manual for wallfollowing program"
 	@echo "make docclean\t-- Clean doxygen manual and files"
@@ -69,11 +69,12 @@ playerp:
 view:
 	playerv -p 6665 --position:0 --laser:0
 
-run:
-	./${TARGET}
-
 slam:
 	pmaptest --num_samples 100 --grid_width 16 --grid_height 16 --grid_scale 0.08 --laser_x 0.13 --robot_x -7 --robot_y -7 --robot_rot 90 ${LOGFILE}
+
+debug:
+	player stage_local/uhh.cfg &
+	ddd ${TARGET} &
 
 tag:
 	${CTAGS} -f ${TAGFILE} -R ${TAGSRCS}
