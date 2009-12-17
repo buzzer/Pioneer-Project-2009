@@ -19,16 +19,18 @@ TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
 
 CFLAGS  = -pg    \
-					-funit-at-a-time \
+          -g3    \
+          -ggdb    \
+          -funit-at-a-time \
           -Wall  \
-					-Wcast-align\
-					-Waggregate-return \
-					-Wcast-qual\
-					-Wcomment\
-					-Wno-deprecated-declarations\
-					-Wdisabled-optimization\
-					-Wreturn-type -Wfatal-errors\
-					-Wunused\
+          -Wcast-align\
+          -Waggregate-return \
+          -Wcast-qual\
+          -Wcomment\
+          -Wno-deprecated-declarations\
+          -Wdisabled-optimization\
+          -Wreturn-type -Wfatal-errors\
+          -Wunused\
           `pkg-config --cflags playerc++`
 LIBS    = `pkg-config --libs playerc++`
 
