@@ -13,7 +13,7 @@ SRCS    = ${TARGET:=.cpp}
 OBJS    = ${SRCS:.cpp=.obj}
 DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
-TAGSRCS = /usr/local/include/player-3.*/libplayerc++/
+TAGSRCS = `pkg-config --cflags playerc++ | sed -e 's/-I//g' | sed -e 's/ .*//g'`
 HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
 TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
@@ -56,9 +56,8 @@ ${TARGET}: ${SRCS} Makefile
 	${CC} -o ${TARGET} ${INC} ${CFLAGS} ${SRCS} ${LIBS}
 
 clean::
-	rm -f ${TARGET} ${TAGFILE}
+	rm -f ${TARGET} ${TAGFILE} ${TARFILE}
 	rm -fr ${TMPDIR}
-	rm -fr ${TARFILE}
 
 player:
 	./start uhh wallfollow # Start the player server and stage simulation
@@ -74,7 +73,7 @@ slam:
 
 debug:
 	player stage_local/uhh.cfg &
-	ddd ${TARGET} &
+	ddd -d ${TAGSRCS} ${TARGET} &
 
 tag:
 	${CTAGS} -f ${TAGFILE} -R ${TAGSRCS}
