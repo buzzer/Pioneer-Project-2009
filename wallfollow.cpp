@@ -436,59 +436,61 @@ void trackBall (Robot * robot)
   curTime = time(NULL); // Get current time
   curTurnrate = robot->getTurnrate(); // Get current turnrate
 
-  std::cout << "Turnrate time/curr./prev.:\t"
-    << curTime << "\t"
-    << curTurnrate << "\t"
-    << robPrevTurnrate << std::endl;
+  //std::cout << "Turnrate time/curr./prev.:\t"
+    //<< curTime << "\t"
+    //<< curTurnrate << "\t"
+    //<< robPrevTurnrate << std::endl;
 
   // Read the camera processed ball coordinates
   // Only once each BALLREQINT
   if(curTime-lastBallReq >= BALLREQINT) {
     ballInfo = DUMMY_getBallInfo(); // Call the camera driver
 
-	
-
- //   std::cout << "Ball time/dist./angle:\t"
- //     << curTime << "\t"
- //     << ballInfo->dist << "\t"
- //     << ballInfo->angle << std::endl;
+   std::cout << "Ball ctime/dist./angle:\t"
+     << curTime << "\t"
+     << ballInfo->dist << "\t"
+     << ballInfo->angle << std::endl;
 
     lastBallReq = curTime;
 
     if( ballInfo->dist==0 ) { // Check if no ball is found
+      std::cout << "NO BALL FOUND" << std::endl;
       if(curTime-lastFound <= BALLTIMEOUT) {// Check if ball was found previously
         // Calculate the remaining guessed turnrate
         vl_turnrate = robPrevTurnrate - (curTurnrate - robPrevTurnrate);
+        std::cout << "  TAKE MANUALL TURNRATE: " << vl_turnrate << std::endl;
       } else {
+        std::cout << "  BALLTRACKING TIMEOUT (sec)\t" << BALLTIMEOUT << std::endl;
         vl_turnrate = 0.; // robot will do wall follow instead
       }
     } else { // A ball has been found
+      std::cout << "BALL FOUND at angle/time:\t"
+        << ballInfo->angle << "\t"
+        << curTime << std::endl;
       lastFound = curTime;
       // Normalize to +/- 180 degrees
-      vl_turnrate = fmod( ( ballInfo->angle + curTurnrate ), M_PI);
+      //vl_turnrate = fmod( ( ballInfo->angle + curTurnrate ), M_PI);
+      vl_turnrate = ballInfo->angle;
+      std::cout << "CALCULATED TURNRATE: " << vl_turnrate << std::endl;
     }
-
-    if( curTime-lastFound > BALLTIMEOUT )
-      vl_turnrate = 0; // Let the robot to default task again
-
   } else {
-      // Keep with the current turnrate
-      vl_turnrate = curTurnrate;
+    std::cout << "KEEPING CURRENT TURNRATE:\t" << curTurnrate << std::endl;
+    // Keep with the current turnrate
+    vl_turnrate = robPrevTurnrate;
   }
-  robPrevTurnrate = curTurnrate; // Remember turnrate for next cycle
+  //robPrevTurnrate = curTurnrate; // Remember turnrate for next cycle
+  robPrevTurnrate = vl_turnrate; // Remember turnrate for next cycle
   // Give the robot a new target, '0' for doing default task
   robot->setTurnrate(vl_turnrate);
 }
 //=================
 int main ( void ) {
-
-  if (!c1394.initCam(width,height))
-  {
-    printf("Initializing Camera failed.\n");
-    return 0;
-  }
-
   try {
+    if (!c1394.initCam(width,height)) {
+      printf("Initializing Camera failed.\n");
+      return 0;
+    }
+
     Robot r0("localhost", 6665, 0);
     std::cout.precision(2);
 

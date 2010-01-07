@@ -15,7 +15,7 @@ DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
 TAGSRCS = `pkg-config --cflags playerc++ | sed -e 's/-I//g' | sed -e 's/ .*//g'`
 #HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
-HOSTTARGET= "cheng@tams53:projekt090406/" # to sync target
+HOSTTARGET= "demo@tams66:projekt090406/" # to sync target
 TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
 
