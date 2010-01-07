@@ -14,7 +14,8 @@ OBJS    = ${SRCS:.cpp=.obj}
 DEPS    = ${SRCS:.cpp=.dep}
 XDEPS   = ${wildcard ${DEPS}}
 TAGSRCS = `pkg-config --cflags playerc++ | sed -e 's/-I//g' | sed -e 's/ .*//g'`
-HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
+#HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
+HOSTTARGET= "cheng@tams53:projekt090406/" # to sync target
 TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
 
@@ -31,9 +32,11 @@ CFLAGS  = -pg    \
           -Wdisabled-optimization\
           -Wreturn-type -Wfatal-errors\
           -Wunused\
-          `pkg-config --cflags playerc++`
-LIBS    = `pkg-config --libs playerc++`
-
+          `pkg-config --cflags playerc++`\
+          `pkg-config --cflags opencv`
+LIBS    = `pkg-config --libs playerc++`\
+          `pkg-config --libs opencv`\
+          -ldc1394 -lraw1394 -ldc1394_control
 .PHONY: all clean player playerp view run tag doc docclean sync
 
 all:

@@ -24,6 +24,9 @@
 #include <cmath>
 #include <libplayerc++/playerc++.h>
 
+#include "cc_camera1394.h"
+#include "cc_ballfinder.h"
+
 using namespace PlayerCc;
 
 // {{{ DEBUG COMPILATION FLAGS
@@ -72,8 +75,8 @@ class Robot {
 private:
   PlayerClient    *robot;
 #ifdef LASER
-  RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
-  //LaserProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
+  //RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
+  LaserProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
 #endif
   SonarProxy      *sp;
   Position2dProxy *pp;
@@ -289,8 +292,8 @@ public:
     robot = new PlayerClient(name, address);
     pp    = new Position2dProxy(robot, id);
 #ifdef LASER
-    lp    = new RangerProxy(robot, id);
-    //lp    = new LaserProxy(robot, id);
+    //lp    = new RangerProxy(robot, id);
+    lp    = new LaserProxy(robot, id);
 #endif
     sp    = new SonarProxy(robot, id);
     robotID      = id;
@@ -379,20 +382,37 @@ public:
   double getTurnrate ( void ) { return turnrate; }
 }; // Class Robot
 //=================
-struct ts_Ball {
+typedef struct ts_Ball {
   int num;
   double dist;
   double angle;
 };
 /// Simulation of the camera's driver call
+const int width=1280;
+const int height=960;
+Single1394 c1394;
+BallFinder fb;
 ts_Ball * DUMMY_getBallInfo ( void ) {
   static ts_Ball ballInfo;
+  Ball *balls;
 
-  srand(time(0));  // initialize seed "randomly"
+//  srand(time(0));  // initialize seed "randomly"
 
-  ballInfo.dist = 1.;
+  c1394.captureImage();
+  balls=fb.DetectBall(c1394.captureBuf);
+  if (balls->num>0)
+  {
+     ballInfo.angle=balls->angle[0];
+     ballInfo.dist=balls->dist[0];
+     delete []balls->angle;
+     delete []balls->dist;
+  }
+  else ballInfo.dist=0;
+  delete balls;
+
+//  ballInfo.dist = 1.;
   // Test random ball angles
-  ballInfo.angle = fmod( rand()*0.01, 2*M_PI ) - M_PI;
+//  ballInfo.angle = fmod( rand()*0.01, 2*M_PI ) - M_PI;
 
   return &ballInfo;
 }
@@ -423,18 +443,19 @@ void trackBall (Robot * robot)
 
   // Read the camera processed ball coordinates
   // Only once each BALLREQINT
-  if(curTime-lastBallReq >= BALLREQINT)
-  {
+  if(curTime-lastBallReq >= BALLREQINT) {
     ballInfo = DUMMY_getBallInfo(); // Call the camera driver
 
-    std::cout << "Ball time/dist./angle:\t"
-      << curTime << "\t"
-      << ballInfo->dist << "\t"
-      << ballInfo->angle << std::endl;
+	
+
+ //   std::cout << "Ball time/dist./angle:\t"
+ //     << curTime << "\t"
+ //     << ballInfo->dist << "\t"
+ //     << ballInfo->angle << std::endl;
 
     lastBallReq = curTime;
 
-    if(ballInfo->dist == 0) { // Check if no ball is found
+    if( ballInfo->dist==0 ) { // Check if no ball is found
       if(curTime-lastFound <= BALLTIMEOUT) {// Check if ball was found previously
         // Calculate the remaining guessed turnrate
         vl_turnrate = robPrevTurnrate - (curTurnrate - robPrevTurnrate);
@@ -460,16 +481,30 @@ void trackBall (Robot * robot)
 }
 //=================
 int main ( void ) {
+
+  if (!c1394.initCam(width,height))
+  {
+    printf("Initializing Camera failed.\n");
+    return 0;
+  }
+
   try {
     Robot r0("localhost", 6665, 0);
     std::cout.precision(2);
+
+    c1394.initFocus();
+    fb.Init(width,height);
+
     while (true) {
       r0.go();
       trackBall(&r0); ///< Let the robot trace the ball if any
     }
   } catch (PlayerCc::PlayerError e) {
     std::cerr << e << std::endl; // let's output the error
+    fb.Over();
+    c1394.cleanup();
     return -1;
   }
+
   return 1;
 }
