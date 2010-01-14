@@ -11,15 +11,15 @@ TAGFILE = tags
 TARGET  = wallfollow
 SRCS    = ${TARGET:=.cpp}
 OBJS    = ${SRCS:.cpp=.obj}
-DEPS    = ${SRCS:.cpp=.dep}
-XDEPS   = ${wildcard ${DEPS}}
+INC     = include
+DEP     = ${SRCS} ${INC}/${SRCS:.cpp=.h} Makefile
 TAGSRCS = `pkg-config --cflags playerc++ | sed -e 's/-I//g' | sed -e 's/ .*//g'`
 #HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
 HOSTTARGET= "demo@tams66:projekt090406/" # to sync target
 TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
 
-CFLAGS  = -pg    \
+CFLAGSSTD=-pg    \
           -g3    \
           -ggdb    \
           -funit-at-a-time \
@@ -31,17 +31,20 @@ CFLAGS  = -pg    \
           -Wno-deprecated-declarations\
           -Wdisabled-optimization\
           -Wreturn-type -Wfatal-errors\
-          -Wunused\
-          `pkg-config --cflags playerc++`\
-          `pkg-config --cflags opencv`
-LIBS    = `pkg-config --libs playerc++`\
-          `pkg-config --libs opencv`\
+          -Wunused
+CFLAGSPL= `pkg-config --cflags playerc++`
+CFLAGSCV= `pkg-config --cflags opencv`
+
+LIBSPL  = `pkg-config --libs playerc++`
+LIBSCV  = `pkg-config --libs opencv`\
           -ldc1394 -lraw1394 -ldc1394_control
-.PHONY: all clean player playerp view run tag doc docclean sync
+
+.PHONY: all cam clean player playerp view run tag doc docclean sync
 
 all:
 	@echo
 	@echo "make wallfollow\t-- Wallfollow compilation"
+	@echo "make cam\t-- Wallfollow with opencv and cam compilation"
 	@echo "make clean\t-- Clean objects"
 	@echo "make player\t-- Start the player server and stage simulation"
 	@echo "make playerp\t-- Start the player server on real pioneer"
@@ -55,10 +58,13 @@ all:
 	@echo "make public\t-- Create a zip archive from mandatory wallfollowing files"
 	@echo
 
-${TARGET}: ${SRCS} Makefile
-	${CC} -o ${TARGET} ${INC} ${CFLAGS} ${SRCS} ${LIBS}
+${TARGET}: ${DEP}
+	${CC} -o ${TARGET} -I${INC} ${CFLAGSSTD} ${CFLAGSPL} ${SRCS} ${LIBSPL} -U OPENCV
 
-clean::
+cam: ${DEP}
+	${CC} -o ${TARGET} -I${INC} ${CFLAGSSTD} ${CFLAGSPL} ${CFLAGSCV} ${SRCS} ${LIBSPL} ${LIBSCV} -D OPENCV
+
+clean:
 	rm -f ${TARGET} ${TAGFILE} ${TARFILE}
 	rm -fr ${TMPDIR}
 

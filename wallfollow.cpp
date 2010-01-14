@@ -23,9 +23,12 @@
 #endif  // }}}
 #include <cmath>
 #include <libplayerc++/playerc++.h>
+#include "wallfollow.h"
 
-#include "cc_camera1394.h"
-#include "cc_ballfinder.h"
+#ifdef OPENCV //{{{
+# include "cc_camera1394.h"
+# include "cc_ballfinder.h"
+#endif //}}}
 
 using namespace PlayerCc;
 
@@ -36,7 +39,9 @@ using namespace PlayerCc;
 #define DEBUG_DIST_NO///< Output of all (fused) ranger readings
 #define DEBUG_POSITION_NO///< Output of the robot's odometry readings
 #define DEBUG_LASER_NO///< Output of laser readings
+#define DEBUG_CAM///< Output camera debug information
 #define LASER///< Uses sonar + laser if defined
+#define OPENCV_NO///< Uses omni vision camera via opencv library(Don't change-> makefile magic!)
 // }}}
 
 // Parameters {{{
@@ -299,6 +304,7 @@ public:
     robotID      = id;
     currentState = WALL_FOLLOWING;
     pp->SetMotorEnable(true);
+    trackTurnrate = TRACKING_NO; // Disable tracking camera targets be default
   }
 
   inline void update ( void ) {
@@ -310,7 +316,7 @@ public:
     for(int i=0; i< 16; i++)
       std::cout << "Sonar " << i << ": " << sp->GetScan(i) << std::endl;
 #endif  // }}}
-    if ( trackTurnrate == 0 ) { ///< Check if ball is not detected in camera FOV
+    if ( trackTurnrate == TRACKING_NO ) { ///< Check if ball is not detected in camera FOV
       // (Left) Wall following
       turnrate = wallfollow(&currentState);
     } else {
@@ -387,35 +393,46 @@ typedef struct ts_Ball {
   double dist;
   double angle;
 };
+#ifndef OPENCV //{{{ Dummy for compilation w/o opencv
+  struct Ball
+  {
+    int num;
+    double* dist;
+    double* angle;
+  };
+#endif //}}}
 /// Simulation of the camera's driver call
 const int width=1280;
 const int height=960;
-Single1394 c1394;
-BallFinder fb;
-ts_Ball * DUMMY_getBallInfo ( void ) {
+#ifdef OPENCV //{{{
+  Single1394 c1394;
+  BallFinder fb;
+#endif //}}}
+
+/// Read the camera driver's ball tracking information
+/// Call of the camera driver may take some time (~1sec)!
+/// @return Pointer to dynamic ball information object.
+ts_Ball * getBallInfo ( void ) {
   static ts_Ball ballInfo;
   Ball *balls;
 
-//  srand(time(0));  // initialize seed "randomly"
-
+#ifdef OPENCV //{{{
   c1394.captureImage();
   balls=fb.DetectBall(c1394.captureBuf);
-  if (balls->num>0)
-  {
+#endif //}}}
+  if (balls->num>0) {
      ballInfo.angle=balls->angle[0];
      ballInfo.dist=balls->dist[0];
      delete []balls->angle;
      delete []balls->dist;
+  } else {
+    ballInfo.dist=0;
   }
-  else ballInfo.dist=0;
   delete balls;
-
-//  ballInfo.dist = 1.;
-  // Test random ball angles
-//  ballInfo.angle = fmod( rand()*0.01, 2*M_PI ) - M_PI;
 
   return &ballInfo;
 }
+
 /// Abstraction layer between robot and camera.
 /// Gets goal coordinates from camera device and directs the robot to it
 /// accordingly.
@@ -436,45 +453,53 @@ void trackBall (Robot * robot)
   curTime = time(NULL); // Get current time
   curTurnrate = robot->getTurnrate(); // Get current turnrate
 
-  //std::cout << "Turnrate time/curr./prev.:\t"
-    //<< curTime << "\t"
-    //<< curTurnrate << "\t"
-    //<< robPrevTurnrate << std::endl;
-
   // Read the camera processed ball coordinates
   // Only once each BALLREQINT
   if(curTime-lastBallReq >= BALLREQINT) {
-    ballInfo = DUMMY_getBallInfo(); // Call the camera driver
+    ballInfo = getBallInfo(); // Call the camera driver
 
+#ifdef DEBUG_CAM //{{{
    std::cout << "Ball ctime/dist./angle:\t"
      << curTime << "\t"
      << ballInfo->dist << "\t"
      << ballInfo->angle << std::endl;
+#endif //}}}
 
     lastBallReq = curTime;
 
     if( ballInfo->dist==0 ) { // Check if no ball is found
+#ifdef DEBUG_CAM //{{{
       std::cout << "NO BALL FOUND" << std::endl;
+#endif //}}}
       if(curTime-lastFound <= BALLTIMEOUT) {// Check if ball was found previously
         // Calculate the remaining guessed turnrate
         vl_turnrate = robPrevTurnrate - (curTurnrate - robPrevTurnrate);
+#ifdef DEBUG_CAM //{{{
         std::cout << "  TAKE MANUALL TURNRATE: " << vl_turnrate << std::endl;
+#endif //}}}
       } else {
+#ifdef DEBUG_CAM //{{{
         std::cout << "  BALLTRACKING TIMEOUT (sec)\t" << BALLTIMEOUT << std::endl;
+#endif //}}}
         vl_turnrate = 0.; // robot will do wall follow instead
       }
     } else { // A ball has been found
+#ifdef DEBUG_CAM //{{{
       std::cout << "BALL FOUND at angle/time:\t"
         << ballInfo->angle << "\t"
         << curTime << std::endl;
+#endif //}}}
       lastFound = curTime;
-      // Normalize to +/- 180 degrees
-      //vl_turnrate = fmod( ( ballInfo->angle + curTurnrate ), M_PI);
+      // @TODO Normalize to +/- 180 degrees
       vl_turnrate = ballInfo->angle;
+#ifdef DEBUG_CAM //{{{
       std::cout << "CALCULATED TURNRATE: " << vl_turnrate << std::endl;
+#endif //}}}
     }
   } else {
+#ifdef DEBUG_CAM //{{{
     std::cout << "KEEPING CURRENT TURNRATE:\t" << curTurnrate << std::endl;
+#endif //}}}
     // Keep with the current turnrate
     vl_turnrate = robPrevTurnrate;
   }
@@ -486,25 +511,33 @@ void trackBall (Robot * robot)
 //=================
 int main ( void ) {
   try {
+#ifdef OPENCV //{{{
     if (!c1394.initCam(width,height)) {
       printf("Initializing Camera failed.\n");
       return 0;
     }
+#endif //}}}
 
     Robot r0("localhost", 6665, 0);
     std::cout.precision(2);
 
+#ifdef OPENCV //{{{
     c1394.initFocus();
     fb.Init(width,height);
+#endif //}}}
 
     while (true) {
       r0.go();
+#ifdef OPENCV //{{{
       trackBall(&r0); ///< Let the robot trace the ball if any
+#endif //}}}
     }
   } catch (PlayerCc::PlayerError e) {
     std::cerr << e << std::endl; // let's output the error
+#ifdef OPENCV //{{{
     fb.Over();
     c1394.cleanup();
+#endif //}}}
     return -1;
   }
 
