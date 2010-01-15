@@ -585,8 +585,11 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = /Users/sebastian/projekt090406 \
-                          /usr/local/include/player-3.1/libplayerc++/ \
-                          /usr/local/include/player-3.0/libplayerc++/
+                         /Users/sebastian/projekt090406/include \
+                         /Users/sebastian/projekt090406/include/libdc1394 \
+                         /Users/sebastian/projekt090406/include/libraw1394 \
+                         /usr/local/include/player-3.1/libplayerc++/ \
+                         /usr/local/include/player-3.0/libplayerc++/
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 
