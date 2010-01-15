@@ -67,6 +67,7 @@ cam: ${DEP}
 clean:
 	rm -f ${TARGET} ${TAGFILE} ${TARFILE}
 	rm -fr ${TMPDIR}
+	rm -f *.out
 
 player:
 	./start uhh wallfollow # Start the player server and stage simulation
