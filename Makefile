@@ -14,8 +14,8 @@ OBJS    = ${SRCS:.cpp=.obj}
 INC     = include
 DEP     = ${SRCS} ${INC}/${SRCS:.cpp=.h} Makefile
 TAGSRCS = `pkg-config --cflags playerc++ | sed -e 's/-I//g' | sed -e 's/ .*//g'`
-#HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
-HOSTTARGET= "demo@tams66:projekt090406/" # to sync target
+HOSTTARGET= "demo@tams67:projekt090406/" # to sync target
+#HOSTTARGET= "demo@tams66:projekt090406/" # to sync target
 TMPDIR  = ./PlayerSource
 TARFILE = PlayerSource.tgz
 
@@ -100,6 +100,7 @@ sync:
 	@scp -r stage_local ${HOSTTARGET}
 	@scp -r pnav_ex ${HOSTTARGET}
 	@scp -r tams ${HOSTTARGET}
+	@scp -r include ${HOSTTARGET}
 	@echo "\nCopied files to ${HOSTTARGET}\n"
 
 public:
@@ -108,6 +109,7 @@ public:
 	@cp start ${TMPDIR}
 	@cp wallfollow.cpp ${TMPDIR}
 	@cp -r stage_local ${TMPDIR}
+	@cp -r include ${TMPDIR}
 	@tar -czvf ${TARFILE} ${TMPDIR}/*
 	@rm -fr ${TMPDIR}
 	@echo "\nCreated archive ${TARFILE}\n"

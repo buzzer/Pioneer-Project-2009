@@ -41,15 +41,15 @@ using namespace PlayerCc;
 #define DEBUG_LASER_NO///< Output of laser readings
 #define DEBUG_CAM///< Output camera debug information
 #define LASER///< Uses sonar + laser if defined
-#define OPENCV_NO///< Uses omni vision camera via opencv library(Don't change-> makefile magic!)
+//#define OPENCV///< Uses omni vision camera via opencv library(Don't change-> makefile magic!)
 // }}}
 
 // Parameters {{{
 const double VEL       = 0.3;///< Normal_advance_speed in meters per sec.
-const double TURN_RATE = 40; ///< Max wall following turnrate in deg per sec.
+const double TURN_RATE = 10; ///< Max wall following turnrate in deg per sec.
                              /// Low values: Smoother trajectory but more
                              /// restricted
-const double STOP_ROT  = 30; ///< Stop rotation speed.
+const double STOP_ROT  = 10; ///< Stop rotation speed.
                              /// Low values increase manauverablility in narrow
                              /// edges, high values let the robot sometimes be
                              /// stuck.
@@ -80,8 +80,8 @@ class Robot {
 private:
   PlayerClient    *robot;
 #ifdef LASER
-  //RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
-  LaserProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
+  RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
+  //LaserProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
 #endif
   SonarProxy      *sp;
   Position2dProxy *pp;
@@ -297,8 +297,8 @@ public:
     robot = new PlayerClient(name, address);
     pp    = new Position2dProxy(robot, id);
 #ifdef LASER
-    //lp    = new RangerProxy(robot, id);
-    lp    = new LaserProxy(robot, id);
+    lp    = new RangerProxy(robot, id);
+    //lp    = new LaserProxy(robot, id);
 #endif
     sp    = new SonarProxy(robot, id);
     robotID      = id;
@@ -388,11 +388,6 @@ public:
   double getTurnrate ( void ) { return turnrate; }
 }; // Class Robot
 //=================
-typedef struct ts_Ball {
-  int num;
-  double dist;
-  double angle;
-};
 #ifndef OPENCV //{{{ Dummy for compilation w/o opencv
   struct Ball
   {
@@ -446,7 +441,7 @@ void trackBall (Robot * robot)
   static double robPrevTurnrate = 0.; // Last turnrate before this one
   time_t curTime; // Current system time
   const time_t BALLTIMEOUT = 5; // Seconds
-  const time_t BALLREQINT  = 2; // Seconds
+  const time_t BALLREQINT  = 1; // Seconds
   static time_t lastFound = 0; // Time when ball was last found
   static time_t lastBallReq = 0; // Time when ball was last searched
 
@@ -467,7 +462,7 @@ void trackBall (Robot * robot)
 
     lastBallReq = curTime;
 
-    if( ballInfo->dist==0 ) { // Check if no ball is found
+    if( ballInfo->dist == 0 ) { // Check if no ball is found
 #ifdef DEBUG_CAM //{{{
       std::cout << "NO BALL FOUND" << std::endl;
 #endif //}}}
@@ -491,7 +486,8 @@ void trackBall (Robot * robot)
 #endif //}}}
       lastFound = curTime;
       // @TODO Normalize to +/- 180 degrees
-      vl_turnrate = ballInfo->angle;
+      //vl_turnrate = ballInfo->angle;
+      vl_turnrate = PlayerCc::limit(ballInfo->angle, -dtor(STOP_ROT), dtor(STOP_ROT));
 #ifdef DEBUG_CAM //{{{
       std::cout << "CALCULATED TURNRATE: " << vl_turnrate << std::endl;
 #endif //}}}
