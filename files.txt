@@ -1,0 +1,13 @@
+# Sebastian Rockel, 2010-01-15
+#
+# Can be files or directories
+# That will be copied or sync to public
+# Must be all files needed for a minimal compiling/running system
+#
+wallfollow.cpp
+Makefile
+start
+stage_local
+pnav_ex
+tams
+include
