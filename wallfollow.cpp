@@ -46,10 +46,10 @@ using namespace PlayerCc;
 
 // Parameters {{{
 const double VEL       = 0.3;///< Normal_advance_speed in meters per sec.
-const double TURN_RATE = 10; ///< Max wall following turnrate in deg per sec.
+const double TURN_RATE = 40; ///< Max wall following turnrate in deg per sec.
                              /// Low values: Smoother trajectory but more
                              /// restricted
-const double STOP_ROT  = 10; ///< Stop rotation speed.
+const double STOP_ROT  = 30; ///< Stop rotation speed.
                              /// Low values increase manauverablility in narrow
                              /// edges, high values let the robot sometimes be
                              /// stuck.
