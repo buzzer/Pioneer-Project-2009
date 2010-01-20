@@ -25,7 +25,6 @@
 #include <libplayerc++/playerc++.h>
 #include "wallfollow.h"
 // For timer services
-//#include <ctime>
 #include <sys/time.h>
 
 #ifdef OPENCV //{{{
@@ -431,6 +430,9 @@ ts_Ball * getBallInfo ( void ) {
   return &ballInfo;
 }
 
+double approxTurnrate(double curTurnrate, double goalTurnrate) {
+  return curTurnrate;
+}
 /// Abstraction layer between robot and camera.
 /// Gets goal coordinates from camera device and directs the robot to it
 /// accordingly.
@@ -443,7 +445,7 @@ void trackBall (Robot * robot)
   double curTurnrate = 0.; // Current robot read turnrate
   static double robPrevTurnrate = 0.; // Last turnrate before this one
   timeval curTime; // Current system time
-  double curTimeSec = 0;
+  double curTimeSec = 0; // Current time in seconds
   const time_t BALLTIMEOUT = 5; // Seconds
   const time_t BALLREQINT  = 0.5; // Seconds, cam polling interval
   static time_t lastFound = 0; // Time when ball was last found
@@ -467,15 +469,15 @@ void trackBall (Robot * robot)
      << ballInfo->angle << std::endl;
 #endif //}}}
 
-    lastBallReq = curTimeSec;
+    lastBallReq = curTimeSec; // Reset request flag
 
-    if( ballInfo->dist == 0 ) { // Check if no ball is found
+    if( ballInfo->dist == 0 ) { // If distance == 0,no ball was found
 #ifdef DEBUG_CAM //{{{
       std::cout << "NO BALL FOUND" << std::endl;
 #endif //}}}
-      if(curTimeSec-lastFound <= BALLTIMEOUT) {// Check if ball was found previously
-        // Calculate the remaining guessed turnrate
-        vl_turnrate = robPrevTurnrate - (curTurnrate - robPrevTurnrate);
+      if(curTimeSec-lastFound <= BALLTIMEOUT) {// When a ball has been found previously
+        /// @todo Take previous turned angle into account
+        vl_turnrate = robPrevTurnrate;// - (curTurnrate - robPrevTurnrate);
 #ifdef DEBUG_CAM //{{{
         std::cout << "  TAKE MANUALL TURNRATE: " << vl_turnrate << std::endl;
 #endif //}}}
@@ -483,7 +485,7 @@ void trackBall (Robot * robot)
 #ifdef DEBUG_CAM //{{{
         std::cout << "  BALLTRACKING TIMEOUT (sec)\t" << BALLTIMEOUT << std::endl;
 #endif //}}}
-        vl_turnrate = 0.; // robot will do wall follow instead
+        vl_turnrate = TRACKING_NO; // Robot will do another task
       }
     } else { // A ball has been found
 #ifdef DEBUG_CAM //{{{
@@ -491,19 +493,19 @@ void trackBall (Robot * robot)
         << ballInfo->angle << "\t"
         << curTimeSec << std::endl;
 #endif //}}}
-      lastFound = curTimeSec;
-      // @TODO Normalize to +/- 180 degrees
-      //vl_turnrate = ballInfo->angle;
-      vl_turnrate = PlayerCc::limit(ballInfo->angle, -dtor(STOP_ROT), dtor(STOP_ROT));
+      lastFound = curTimeSec; // Reset found flag
+      // Turn towards goal, limit to slow turn speed
+      vl_turnrate = PlayerCc::limit(ballInfo->angle, -dtor(STOP_ROT/5), dtor(STOP_ROT/5));
 #ifdef DEBUG_CAM //{{{
       std::cout << "CALCULATED TURNRATE: " << vl_turnrate << std::endl;
 #endif //}}}
     }
-  } else {
+  } else { // When a camera request is not yet done again
 #ifdef DEBUG_CAM //{{{
     std::cout << "KEEPING CURRENT TURNRATE:\t" << curTurnrate << std::endl;
 #endif //}}}
     // Keep with the current turnrate
+    /// @todo Take previous turned angle into account
     vl_turnrate = robPrevTurnrate;
   }
   //robPrevTurnrate = curTurnrate; // Remember turnrate for next cycle

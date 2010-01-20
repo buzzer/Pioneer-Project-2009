@@ -8,6 +8,6 @@ wallfollow.cpp
 Makefile
 start
 stage_local
-pnav_ex
-tams
 include
+#pnav_ex
+#tams
