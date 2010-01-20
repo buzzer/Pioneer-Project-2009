@@ -19,7 +19,6 @@
 /// @image html AngleDefinition.png "Calculating turning angle via the atan function"
 #ifdef DEBUG  // {{{
 #include <iostream>
-#include <cstdlib>   // for srand and rand
 #endif  // }}}
 #include <cmath>
 #include <libplayerc++/playerc++.h>
@@ -420,15 +419,19 @@ ts_Ball * getBallInfo ( void ) {
   c1394.captureImage();
   balls=fb.DetectBall(c1394.captureBuf);
 #endif //}}}
-  if (balls->num>0) {
-     ballInfo.angle=balls->angle[0];
-     ballInfo.dist=balls->dist[0];
+  if ( balls->num > 0 ) {
+     ballInfo.angle = balls->angle[0];
+     ballInfo.dist  = balls->dist[0];
      delete []balls->angle;
      delete []balls->dist;
   } else {
-    ballInfo.dist=0;
+    ballInfo.num = 0;
   }
   delete balls;
+
+  assert( abs(ballInfo.angle) <= M_PI);
+  assert( ballInfo.dist >= 0 );
+  assert( ballInfo.num >= 0 );
 
   return &ballInfo;
 }
@@ -449,6 +452,8 @@ double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFla
 
   assert( abs(curOrientation) <= M_PI );
   assert( abs(goalAngle) <= M_PI );
+  assert( abs(lastOrientation) <= M_PI );
+  assert( abs(lastGoalAngle) <= M_PI );
 #ifdef DEBUG_CAM //{{{
   std::cout << "APPROX.TR:(curOrient,lastOrient,goalAngle,lastGoalA,Flag)\t"
     << curOrientation << "\t"
@@ -463,12 +468,13 @@ double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFla
     *newGoalFlag = false; // Mark current goal being tracked
     lastGoalAngle = goalAngle; // Store last goal angle
     lastOrientation = curOrientation; // Store last global orientation
+    approxTurnrate = goalAngle;
   } else { // OLD GOAL
     lastGoalAngle = (lastOrientation-curOrientation) + goalAngle;
     assert( abs(lastGoalAngle) >= abs(goalAngle) );
+    approxTurnrate = fmod((curOrientation + goalAngle), M_PI);
   }
 
-  approxTurnrate = fmod((curOrientation + goalAngle), M_PI);
   assert( abs(approxTurnrate) <= M_PI );
 
   return approxTurnrate;
@@ -494,33 +500,32 @@ void trackBall (Robot * robot)
   // Get current time
   gettimeofday(&curTime, 0);
   curTimeSec = curTime.tv_sec + curTime.tv_usec/1e6;
+  assert( curTimeSec >= 1 );
 
   // Current global orientation of robot
   curOrientation = robot->getOrientation();
+  assert( abs(curOrientation) <= M_PI );
 
-  // Read the camera processed ball coordinates
-  // Only once each BALLREQINT
+  assert( curTimeSec >= lastBallReq );
+  // Call driver only once each BALLREQINT
   if(curTimeSec-lastBallReq >= BALLREQINT) {
-    ballInfo = getBallInfo(); // Call the camera driver
 
+    ballInfo = getBallInfo(); // Call the camera driver
 #ifdef DEBUG_CAM //{{{
-   std::cout << "Ball ctime/dist./angle:\t"
+   std::cout << "Ball ctime/dist./angle/num:\t"
      << curTimeSec << "\t"
      << ballInfo->dist << "\t"
-     << ballInfo->angle << std::endl;
+     << ballInfo->angle << "\t"
+     << ballInfo->num << std::endl;
 #endif //}}}
+    lastBallReq = curTimeSec; // Reset request time
 
-    lastBallReq = curTimeSec; // Reset request flag
-
-    if( ballInfo->dist == 0 ) { // If distance == 0,no ball was found
+    if ( ballInfo->num == 0 ) { // When no balls have been found
 #ifdef DEBUG_CAM //{{{
       std::cout << "NO BALL FOUND" << std::endl;
 #endif //}}}
-      if(curTimeSec-lastFound <= BALLTIMEOUT) {// When a ball has been found previously
-        // Take previous turned angle into account
-        vl_turnrate = PlayerCc::limit(approxTurnrate(curOrientation, goalAngle, &newGoalFlag),
-                        -dtor(TRACK_ROT), dtor(TRACK_ROT));
-      } else {
+      assert( curTimeSec >= lastFound );
+      if(curTimeSec-lastFound > BALLTIMEOUT) { // When beyond the time out
 #ifdef DEBUG_CAM //{{{
         std::cout << "  BALLTRACKING TIMEOUT (sec)\t" << BALLTIMEOUT << std::endl;
 #endif //}}}
@@ -532,16 +537,15 @@ void trackBall (Robot * robot)
         << ballInfo->angle << "\t"
         << curTimeSec << std::endl;
 #endif //}}}
-      lastFound = curTimeSec; // Reset found flag
-      // Turn towards goal, limit to slow turn speed
+      lastFound = curTimeSec; // Reset found time
       goalAngle = ballInfo->angle;
       newGoalFlag = true; // Mark as new goal angle
-      vl_turnrate = PlayerCc::limit(goalAngle, -dtor(TRACK_ROT), dtor(TRACK_ROT));
     }
-  } else { // When a camera request is not yet done again
-    // Take previous turned angle into account
+  } // else estimate to old goal position
+
+  if (vl_turnrate != TRACKING_NO) {
     vl_turnrate = PlayerCc::limit(approxTurnrate(curOrientation, goalAngle, &newGoalFlag),
-                    -dtor(TRACK_ROT), dtor(TRACK_ROT));
+        -dtor(TRACK_ROT), dtor(TRACK_ROT));
   }
   robPrevTurnrate = vl_turnrate; // Remember turnrate for next cycle
   // Give the robot a new target, '0' for doing default task
