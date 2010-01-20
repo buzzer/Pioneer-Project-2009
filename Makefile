@@ -64,6 +64,7 @@ clean:
 	rm -f ${TARGET} ${TAGFILE}
 	rm -f *.out
 	rm -f *.tgz
+	rm -fr *.dSYM
 
 player:
 	./start uhh wallfollow # Start the player server and stage simulation
