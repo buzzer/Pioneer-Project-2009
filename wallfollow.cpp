@@ -24,6 +24,9 @@
 #include <cmath>
 #include <libplayerc++/playerc++.h>
 #include "wallfollow.h"
+// For timer services
+//#include <ctime>
+#include <sys/time.h>
 
 #ifdef OPENCV //{{{
 # include "cc_camera1394.h"
@@ -439,34 +442,38 @@ void trackBall (Robot * robot)
   double vl_turnrate = 0.; // Local calculated robot write turnrate
   double curTurnrate = 0.; // Current robot read turnrate
   static double robPrevTurnrate = 0.; // Last turnrate before this one
-  time_t curTime; // Current system time
+  timeval curTime; // Current system time
+  double curTimeSec = 0;
   const time_t BALLTIMEOUT = 5; // Seconds
-  const time_t BALLREQINT  = 1; // Seconds
+  const time_t BALLREQINT  = 0.5; // Seconds, cam polling interval
   static time_t lastFound = 0; // Time when ball was last found
   static time_t lastBallReq = 0; // Time when ball was last searched
 
-  curTime = time(NULL); // Get current time
+  // Get current time
+  gettimeofday(&curTime, 0);
+  curTimeSec = curTime.tv_sec + curTime.tv_usec/1e6;
+
   curTurnrate = robot->getTurnrate(); // Get current turnrate
 
   // Read the camera processed ball coordinates
   // Only once each BALLREQINT
-  if(curTime-lastBallReq >= BALLREQINT) {
+  if(curTimeSec-lastBallReq >= BALLREQINT) {
     ballInfo = getBallInfo(); // Call the camera driver
 
 #ifdef DEBUG_CAM //{{{
    std::cout << "Ball ctime/dist./angle:\t"
-     << curTime << "\t"
+     << curTimeSec << "\t"
      << ballInfo->dist << "\t"
      << ballInfo->angle << std::endl;
 #endif //}}}
 
-    lastBallReq = curTime;
+    lastBallReq = curTimeSec;
 
     if( ballInfo->dist == 0 ) { // Check if no ball is found
 #ifdef DEBUG_CAM //{{{
       std::cout << "NO BALL FOUND" << std::endl;
 #endif //}}}
-      if(curTime-lastFound <= BALLTIMEOUT) {// Check if ball was found previously
+      if(curTimeSec-lastFound <= BALLTIMEOUT) {// Check if ball was found previously
         // Calculate the remaining guessed turnrate
         vl_turnrate = robPrevTurnrate - (curTurnrate - robPrevTurnrate);
 #ifdef DEBUG_CAM //{{{
@@ -482,9 +489,9 @@ void trackBall (Robot * robot)
 #ifdef DEBUG_CAM //{{{
       std::cout << "BALL FOUND at angle/time:\t"
         << ballInfo->angle << "\t"
-        << curTime << std::endl;
+        << curTimeSec << std::endl;
 #endif //}}}
-      lastFound = curTime;
+      lastFound = curTimeSec;
       // @TODO Normalize to +/- 180 degrees
       //vl_turnrate = ballInfo->angle;
       vl_turnrate = PlayerCc::limit(ballInfo->angle, -dtor(STOP_ROT), dtor(STOP_ROT));
