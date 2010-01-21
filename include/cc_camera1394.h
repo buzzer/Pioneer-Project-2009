@@ -42,14 +42,16 @@ class Single1394
       imagelen=width*height*2;
       captureBuf=(unsigned char *)malloc(imagelen);
       // Create DC1394 handle
-      if ((fwHandle=dc1394_create_handle(0))==NULL)
+      if ((fwHandle=dc1394_create_handle(1))==NULL)
       {
         printf("-E- failed to get raw1394 handle\n");
         return 0;
       }
       // Get DC1394 node
       fwNodeNum=raw1394_get_nodecount(fwHandle);
+printf("%x   %d nodes\n",fwCamNodes,fwNodeNum);
       fwCamNodes=dc1394_get_camera_nodes(fwHandle,&fwCamNum,1);
+printf("%x:%d",fwCamNodes,fwCamNum);
       if (fwCamNum<1)
       {
         printf("-E- no camera found\n");
@@ -124,7 +126,7 @@ class Single1394
       focus[low].val=focRange/4;
       focus[mid].val=focRange/2;
       focus[high].val=focRange*3/4;
-      dc1394_set_focus(fwHandle, fwCamera.node, focus[mid].val); // now the focus is set to MID
+      dc1394_set_focus(fwHandle, fwCamera.node, focus[high].val); // now the focus is set to MID
       printf("\n");
     }
 
@@ -140,7 +142,7 @@ class Single1394
 
     int captureImage()
     {
-      dc1394_dma_single_capture(&fwCamera);
+      dc1394_dma_single_capture_poll(&fwCamera);
       dc1394_dma_done_with_buffer(&fwCamera);
       memcpy(captureBuf,fwCamera.capture_buffer,imagelen);
       return 1;

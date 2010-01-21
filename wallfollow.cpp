@@ -55,8 +55,8 @@ const double STOP_ROT  = 30; ///< Stop rotation speed.
                              /// edges, high values let the robot sometimes be
                              /// stuck.
 const double TRACK_ROT =  5; /// Goal tracking rotation speed in degrees per sec.
-const time_t BALLTIMEOUT = 5;/// Goal tracking time out in seconds.
-const time_t BALLREQINT  = 0.5;/// Goal position request interval, i.e. driver
+const time_t BALLTIMEOUT = 30;/// Goal tracking time out in seconds.
+const time_t BALLREQINT  = 2;/// Goal position request interval, i.e. driver
                                /// call, in seconds.
 const double WALLFOLLOWDIST = 0.5; ///< Preferred wall following distance in meters.
 const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance in meters.
@@ -422,6 +422,7 @@ ts_Ball * getBallInfo ( void ) {
   if ( balls->num > 0 ) {
      ballInfo.angle = balls->angle[0];
      ballInfo.dist  = balls->dist[0];
+     ballInfo.num   = balls->num;
      delete []balls->angle;
      delete []balls->dist;
   } else {
@@ -487,7 +488,7 @@ double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFla
 void trackBall (Robot * robot)
 {
   ts_Ball * ballInfo; // Pointer to the ball coordinates from camera
-  double vl_turnrate = 0.; // Local calculated robot write turnrate
+  double vl_turnrate = TRACKING_NO; // Local calculated robot write turnrate
   static double robPrevTurnrate = 0.; // Last turnrate before this one
   static double goalAngle = 0.; // Relative turnrate to goal
   timeval curTime; // Current system time
@@ -504,6 +505,7 @@ void trackBall (Robot * robot)
 
   // Current global orientation of robot
   curOrientation = robot->getOrientation();
+  curOrientation -= M_PI; // Normalize to +/- 180 degrees
   assert( abs(curOrientation) <= M_PI );
 
   assert( curTimeSec >= lastBallReq );
@@ -540,6 +542,7 @@ void trackBall (Robot * robot)
       lastFound = curTimeSec; // Reset found time
       goalAngle = ballInfo->angle;
       newGoalFlag = true; // Mark as new goal angle
+      vl_turnrate = goalAngle;
     }
   } // else estimate to old goal position
 
