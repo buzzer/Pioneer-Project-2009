@@ -542,12 +542,13 @@ void trackBall (Robot * robot)
       lastFound = curTimeSec; // Reset found time
       goalAngle = ballInfo->angle;
       newGoalFlag = true; // Mark as new goal angle
-      vl_turnrate = goalAngle;
+      // Set the 1st turn direction
+      vl_turnrate = limit(goalAngle,-dtor(TRACK_ROT),dtor(TRACK_ROT));
     }
   } // else estimate to old goal position
 
   if (vl_turnrate != TRACKING_NO) {
-    vl_turnrate = PlayerCc::limit(approxTurnrate(curOrientation, goalAngle, &newGoalFlag),
+    vl_turnrate = limit(approxTurnrate(curOrientation, goalAngle, &newGoalFlag),
         -dtor(TRACK_ROT), dtor(TRACK_ROT));
   }
   robPrevTurnrate = vl_turnrate; // Remember turnrate for next cycle
