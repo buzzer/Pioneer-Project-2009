@@ -20,9 +20,9 @@ fi
 
 player -p $PlaPort $prefix/$world.cfg & # Stage world
 sleep $DefStageWait # Wait for Stage world to come up
-player -p $LogPort -q $prefix/writelog.cfg & # Start writelog driver
-sleep 1
-playervcr -p $LogPort & # Start logging controller
+#player -p $LogPort -q $prefix/writelog.cfg & # Start writelog driver
+#sleep 1
+#playervcr -p $LogPort & # Start logging controller
 
 if [ ! -z $2 ] ; then
   ./$2
