@@ -46,17 +46,17 @@ using namespace PlayerCc;
 // }}}
 
 // Parameters {{{
-const double VEL       = 0.0;///< Normal_advance_speed in meters per sec.
-const double TURN_RATE = 0; ///< Max wall following turnrate in deg per sec.
+const double VEL       = 0.2;///< Normal_advance_speed in meters per sec.
+const double TURN_RATE = 30; ///< Max wall following turnrate in deg per sec.
                              /// Low values: Smoother trajectory but more
                              /// restricted
-const double STOP_ROT  = 0; ///< Stop rotation speed.
+const double STOP_ROT  = 40; ///< Stop rotation speed.
                              /// Low values increase manauverablility in narrow
                              /// edges, high values let the robot sometimes be
                              /// stuck.
-const double TRACK_ROT =  40; /// Goal tracking rotation speed in degrees per sec.
-const double YAW_TOLERANCE = 10;///< Yaw tolerance for ball tracking in deg
-const double DIST_TOLERANCE = 1.0;///< Distance tolerance before stopping in meters
+const double TRACK_ROT =  30; /// Goal tracking rotation speed in degrees per sec.
+const double YAW_TOLERANCE = 20;///< Yaw tolerance for ball tracking in deg
+const double DIST_TOLERANCE = 0.5;///< Distance tolerance before stopping in meters
 const time_t BALLTIMEOUT = 10;/// Goal tracking time out in seconds.
 const time_t BALLREQINT  = 1;/// Goal position request interval, i.e. driver
                                /// call, in seconds.
@@ -168,21 +168,21 @@ private:
   {
     // Scan safety areas for walls
     switch (viewDirection) {
-      case LEFT      : return min(getDistanceLas(LMIN,  LMAX) -HORZOFFSET-SHAPE_DIST, min(sp->GetScan(0), sp->GetScan(15))-SHAPE_DIST);
-      case RIGHT     : return min(getDistanceLas(RMIN,  RMAX) -HORZOFFSET-SHAPE_DIST, min(sp->GetScan(7), sp->GetScan(8)) -SHAPE_DIST);
-      case FRONT     : return min(getDistanceLas(FMIN,  FMAX)            -SHAPE_DIST, min(sp->GetScan(3), sp->GetScan(4)) -SHAPE_DIST);
-      case RIGHTFRONT: return min(getDistanceLas(RFMIN, RFMAX)-DIAGOFFSET-SHAPE_DIST, min(sp->GetScan(5), sp->GetScan(6)) -SHAPE_DIST);
-      case LEFTFRONT : return min(getDistanceLas(LFMIN, LFMAX)-DIAGOFFSET-SHAPE_DIST, min(sp->GetScan(1), sp->GetScan(2)) -SHAPE_DIST);
-      case BACK      : return min(sp->GetScan(11), sp->GetScan(12))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-      case LEFTREAR  : return min(sp->GetScan(13), sp->GetScan(14))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-      case RIGHTREAR : return min(sp->GetScan(9) , sp->GetScan(10))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-      case ALL       : return min(getDistance(LEFT),
-                           min(getDistance(RIGHT),
-                             min(getDistance(FRONT),
-                               min(getDistance(BACK),
-                                 min(getDistance(RIGHTFRONT),
-                                   min(getDistance(LEFTFRONT),
-                                     min(getDistance(LEFTREAR), getDistance(RIGHTREAR) )))))));
+      case LEFT      : return PlayerCc::min(getDistanceLas(LMIN,  LMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(0), sp->GetScan(15))-SHAPE_DIST);
+      case RIGHT     : return PlayerCc::min(getDistanceLas(RMIN,  RMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(7), sp->GetScan(8)) -SHAPE_DIST);
+      case FRONT     : return PlayerCc::min(getDistanceLas(FMIN,  FMAX)            -SHAPE_DIST, PlayerCc::min(sp->GetScan(3), sp->GetScan(4)) -SHAPE_DIST);
+      case RIGHTFRONT: return PlayerCc::min(getDistanceLas(RFMIN, RFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(5), sp->GetScan(6)) -SHAPE_DIST);
+      case LEFTFRONT : return PlayerCc::min(getDistanceLas(LFMIN, LFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(1), sp->GetScan(2)) -SHAPE_DIST);
+      case BACK      : return PlayerCc::min(sp->GetScan(11), sp->GetScan(12))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case LEFTREAR  : return PlayerCc::min(sp->GetScan(13), sp->GetScan(14))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case RIGHTREAR : return PlayerCc::min(sp->GetScan(9) , sp->GetScan(10))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case ALL       : return PlayerCc::min(getDistance(LEFT),
+                           PlayerCc::min(getDistance(RIGHT),
+                             PlayerCc::min(getDistance(FRONT),
+                               PlayerCc::min(getDistance(BACK),
+                                 PlayerCc::min(getDistance(RIGHTFRONT),
+                                   PlayerCc::min(getDistance(LEFTFRONT),
+                                     PlayerCc::min(getDistance(LEFTREAR), getDistance(RIGHTREAR) )))))));
       default: return 0.; // Should be recognized if happens
     }
   }
@@ -266,8 +266,8 @@ private:
   /// @todo Code review
   inline double calcspeed ( void )
   {
-    double tmpMinDistFront = min(getDistance(LEFTFRONT), min(getDistance(FRONT), getDistance(RIGHTFRONT)));
-    double tmpMinDistBack  = min(getDistance(LEFTREAR), min(getDistance(BACK), getDistance(RIGHTREAR)));
+    double tmpMinDistFront = PlayerCc::min(getDistance(LEFTFRONT), PlayerCc::min(getDistance(FRONT), getDistance(RIGHTFRONT)));
+    double tmpMinDistBack  = PlayerCc::min(getDistance(LEFTREAR), PlayerCc::min(getDistance(BACK), getDistance(RIGHTREAR)));
     double speed = VEL;
 
     if (tmpMinDistFront < WALLFOLLOWDIST) {
@@ -305,13 +305,13 @@ public:
     robot = new PlayerClient(name, address);
     pp    = new Position2dProxy(robot, id);
 #ifdef LASER
-    lp    = new RangerProxy(robot, id);
+    lp = new RangerProxy(robot, id);
     //lp    = new LaserProxy(robot, id);
 #endif
     sp    = new SonarProxy(robot, id);
     robotID      = id;
     currentState = WALL_FOLLOWING;
-    //pp->SetMotorEnable(true);
+    pp->SetMotorEnable(true);
     trackTurnrate = TRACKING_NO; // Disable tracking camera targets be default
   }
 
@@ -336,7 +336,7 @@ public:
       currentState = BALL_TRACKING;
       std::cout << "BALL_TRACKING" << std::endl;
       turnrate = trackTurnrate;
-      //speed    = trackSpeed;
+      speed    = trackSpeed;
     }
 
     // Set speed dependend on the wall distance
@@ -363,14 +363,14 @@ public:
       << "XXX"                                    << "\t"
       << "XXX"                                    << "\t"
       << "XXX"                                    << std::endl;
-    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << min(sp->GetScan(15),sp->GetScan(0)) << "\t"
-      << min(sp->GetScan(1), sp->GetScan(2))              << "\t"
-      << min(sp->GetScan(3), sp->GetScan(4))              << "\t"
-      << min(sp->GetScan(5), sp->GetScan(6))              << "\t"
-      << min(sp->GetScan(7), sp->GetScan(8))              << "\t"
-      << min(sp->GetScan(9), sp->GetScan(10))-MOUNTOFFSET << "\t"
-      << min(sp->GetScan(11),sp->GetScan(12))-MOUNTOFFSET << "\t"
-      << min(sp->GetScan(13),sp->GetScan(14))-MOUNTOFFSET << std::endl;
+    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << PlayerCc::min(sp->GetScan(15),sp->GetScan(0)) << "\t"
+      << PlayerCc::min(sp->GetScan(1), sp->GetScan(2))              << "\t"
+      << PlayerCc::min(sp->GetScan(3), sp->GetScan(4))              << "\t"
+      << PlayerCc::min(sp->GetScan(5), sp->GetScan(6))              << "\t"
+      << PlayerCc::min(sp->GetScan(7), sp->GetScan(8))              << "\t"
+      << PlayerCc::min(sp->GetScan(9), sp->GetScan(10))-MOUNTOFFSET << "\t"
+      << PlayerCc::min(sp->GetScan(11),sp->GetScan(12))-MOUNTOFFSET << "\t"
+      << PlayerCc::min(sp->GetScan(13),sp->GetScan(14))-MOUNTOFFSET << std::endl;
     std::cout << "Shape (l/lf/f/rf/r/rb/b/lb):\t" << getDistance(LEFT) << "\t"
       << getDistance(LEFTFRONT)  << "\t"
       << getDistance(FRONT)      << "\t"
@@ -385,7 +385,9 @@ public:
 #endif  // }}}
   }
   /// Command the motors
-  inline void execute() { pp->SetSpeed(speed, turnrate); }
+  inline void execute() {
+    std::cout << "SET SPEED/TURN:\t" << speed << "\t" << turnrate << std::endl;
+    pp->SetSpeed(speed, turnrate); }
   void go() {
     this->update();
     this->plan();
@@ -459,6 +461,7 @@ ts_Ball * getBallInfo ( void ) {
 double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFlag) {
 
   static double goalYaw = 0.;
+  static double oldGoalAngle = 0.;
   double approxTurnrate = 0.;
 
   assert( abs(curOrientation) <= 2*M_PI );
@@ -469,13 +472,20 @@ double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFla
     *newGoalFlag = false; // Mark current goal being tracked
     // Normalized absolute goal angle
     goalYaw = fmod((curOrientation + goalAngle), 2*M_PI);
+    oldGoalAngle = goalAngle;
   }
+  std::cout << "Goal YAW delta:\t" << fabs(curOrientation - goalYaw) << std::endl;
   // Normalized absolute goal orientation
   if (fabs(curOrientation - goalYaw) < dtor(YAW_TOLERANCE)){
     approxTurnrate = 0; // Heading to the goal
   } else { // Turning towards goal
-    goalAngle<0 ? approxTurnrate=-dtor(TRACK_ROT) : approxTurnrate=dtor(TRACK_ROT);
+    (oldGoalAngle<0) ? (approxTurnrate=-dtor(TRACK_ROT)) : (approxTurnrate=dtor(TRACK_ROT));
   }
+  //if (oldGoalAngle < 0) { // to the right/*{{{*/
+    //approxTurnrate = -dtor(TRACK_ROT);
+  //} else { // to the left
+    //approxTurnrate = dtor(TRACK_ROT);
+  //}/*}}}*/
 
   std::cout << "CurPos/GoalPos/Turnrate:\t"
     << rtod(curOrientation) << "\t"
@@ -485,6 +495,7 @@ double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFla
   assert( abs(approxTurnrate) <= dtor(TRACK_ROT) );
 
   return approxTurnrate;
+  //return -dtor(10);
 }
 /// Abstraction layer between robot and camera.
 /// Gets goal coordinates from camera device and directs the robot to it
@@ -560,10 +571,10 @@ void trackBall (Robot * robot)
   }
 
   // Calculate track turnrate always except when not tracking the goal
-  if (vl_turnrate != TRACKING_NO) {
+  //if (vl_turnrate != TRACKING_NO) {
     vl_turnrate = limit(approxTurnrate(curOrientation, goalAngle, &newGoalFlag),
         -dtor(TRACK_ROT), dtor(TRACK_ROT));
-  }
+  //}
   robPrevTurnrate = vl_turnrate; // Remember turnrate for next cycle
   // Give the robot a new target, '0' for doing default task
   robot->setTurnrate(vl_turnrate);
