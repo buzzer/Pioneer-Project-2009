@@ -38,7 +38,7 @@ using namespace PlayerCc;
 #define DEBUG_STATE///< Output of the robot's internal state
 #define DEBUG_SONAR_NO///< Output of sonar readings
 #define DEBUG_DIST_NO///< Output of all (fused) ranger readings
-#define DEBUG_POSITION_NO///< Output of the robot's odometry readings
+#define DEBUG_POSITION///< Output of the robot's odometry readings
 #define DEBUG_LASER_NO///< Output of laser readings
 #define DEBUG_CAM///< Output camera debug information
 #define LASER///< Uses sonar + laser if defined
@@ -46,17 +46,19 @@ using namespace PlayerCc;
 // }}}
 
 // Parameters {{{
-const double VEL       = 0.3;///< Normal_advance_speed in meters per sec.
-const double TURN_RATE = 40; ///< Max wall following turnrate in deg per sec.
+const double VEL       = 0.0;///< Normal_advance_speed in meters per sec.
+const double TURN_RATE = 0; ///< Max wall following turnrate in deg per sec.
                              /// Low values: Smoother trajectory but more
                              /// restricted
-const double STOP_ROT  = 30; ///< Stop rotation speed.
+const double STOP_ROT  = 0; ///< Stop rotation speed.
                              /// Low values increase manauverablility in narrow
                              /// edges, high values let the robot sometimes be
                              /// stuck.
-const double TRACK_ROT =  5; /// Goal tracking rotation speed in degrees per sec.
-const time_t BALLTIMEOUT = 30;/// Goal tracking time out in seconds.
-const time_t BALLREQINT  = 2;/// Goal position request interval, i.e. driver
+const double TRACK_ROT =  40; /// Goal tracking rotation speed in degrees per sec.
+const double YAW_TOLERANCE = 10;///< Yaw tolerance for ball tracking in deg
+const double DIST_TOLERANCE = 1.0;///< Distance tolerance before stopping in meters
+const time_t BALLTIMEOUT = 10;/// Goal tracking time out in seconds.
+const time_t BALLREQINT  = 1;/// Goal position request interval, i.e. driver
                                /// call, in seconds.
 const double WALLFOLLOWDIST = 0.5; ///< Preferred wall following distance in meters.
 const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance in meters.
@@ -114,6 +116,7 @@ private:
   double    turnrate; ///< Current robot turnrate
   double    tmp_turnrate; ///< Used for behavior turnrate fusion
   double    trackTurnrate; ///< Zero or tracking the ball turnrate
+  double    trackSpeed; ///< Tracking ball speed
   StateType currentState; ///< Current robot state
 
   /// Returns the minimum distance of the given arc.
@@ -308,7 +311,7 @@ public:
     sp    = new SonarProxy(robot, id);
     robotID      = id;
     currentState = WALL_FOLLOWING;
-    pp->SetMotorEnable(true);
+    //pp->SetMotorEnable(true);
     trackTurnrate = TRACKING_NO; // Disable tracking camera targets be default
   }
 
@@ -322,21 +325,25 @@ public:
       std::cout << "Sonar " << i << ": " << sp->GetScan(i) << std::endl;
 #endif  // }}}
     if ( trackTurnrate == TRACKING_NO ) { ///< Check if ball is not detected in camera FOV
+
       // (Left) Wall following
       turnrate = wallfollow(&currentState);
+      // Collision avoidance overrides other turnrate if neccessary!
+      collisionAvoid(&turnrate, &currentState);
+
     } else {
       // Track the ball
       currentState = BALL_TRACKING;
       std::cout << "BALL_TRACKING" << std::endl;
       turnrate = trackTurnrate;
+      //speed    = trackSpeed;
     }
-
-    // Collision avoidance overrides other turnrate if neccessary!
-    collisionAvoid(&turnrate,
-                   &currentState);
 
     // Set speed dependend on the wall distance
     speed = calcspeed();
+
+    // Fusion speed with ball tracking: lower wins
+    speed>trackSpeed ? speed=trackSpeed : speed;
 
     // Check if rotating is safe
     checkrotate(&tmp_turnrate);
@@ -388,6 +395,10 @@ public:
   /// @param Turnrate in radians, '0' will do wall follow
   /// @todo Make thread safe
   void setTurnrate( double vl_turnrate ) { trackTurnrate = vl_turnrate; }
+  /// Set Robot speed in meters per sec
+  /// @param vl_speed Robot speed in meters per sec
+  /// @todo Make thread safe
+  void setSpeed ( double vl_speed ) { trackSpeed = vl_speed; }
   /// Get global robot orientation in radians
   double getOrientation ( void ) { return pp->GetYaw(); }
 }; // Class Robot
@@ -447,36 +458,31 @@ ts_Ball * getBallInfo ( void ) {
 /// again
 double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFlag) {
 
-  static double lastGoalAngle = 0.;
-  static double lastOrientation = 0.;
+  static double goalYaw = 0.;
   double approxTurnrate = 0.;
 
-  assert( abs(curOrientation) <= M_PI );
+  assert( abs(curOrientation) <= 2*M_PI );
   assert( abs(goalAngle) <= M_PI );
-  assert( abs(lastOrientation) <= M_PI );
-  assert( abs(lastGoalAngle) <= M_PI );
-#ifdef DEBUG_CAM //{{{
-  std::cout << "APPROX.TR:(curOrient,lastOrient,goalAngle,lastGoalA,Flag)\t"
-    << curOrientation << "\t"
-    << lastOrientation << "\t"
-    << goalAngle << "\t"
-    << lastGoalAngle << "\t"
-    << newGoalFlag << std::endl;
-#endif //}}}
 
-  // NEW GOAL
+  // MARK NEW GOAL
   if (*newGoalFlag == true) { // New goal defined
     *newGoalFlag = false; // Mark current goal being tracked
-    lastGoalAngle = goalAngle; // Store last goal angle
-    lastOrientation = curOrientation; // Store last global orientation
-    approxTurnrate = goalAngle;
-  } else { // OLD GOAL
-    lastGoalAngle = (lastOrientation-curOrientation) + goalAngle;
-    assert( abs(lastGoalAngle) >= abs(goalAngle) );
-    approxTurnrate = fmod((curOrientation + goalAngle), M_PI);
+    // Normalized absolute goal angle
+    goalYaw = fmod((curOrientation + goalAngle), 2*M_PI);
+  }
+  // Normalized absolute goal orientation
+  if (fabs(curOrientation - goalYaw) < dtor(YAW_TOLERANCE)){
+    approxTurnrate = 0; // Heading to the goal
+  } else { // Turning towards goal
+    goalAngle<0 ? approxTurnrate=-dtor(TRACK_ROT) : approxTurnrate=dtor(TRACK_ROT);
   }
 
-  assert( abs(approxTurnrate) <= M_PI );
+  std::cout << "CurPos/GoalPos/Turnrate:\t"
+    << rtod(curOrientation) << "\t"
+    << rtod(goalYaw) << "\t"
+    << rtod(approxTurnrate) << std::endl;
+
+  assert( abs(approxTurnrate) <= dtor(TRACK_ROT) );
 
   return approxTurnrate;
 }
@@ -488,15 +494,16 @@ double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFla
 void trackBall (Robot * robot)
 {
   ts_Ball * ballInfo; // Pointer to the ball coordinates from camera
-  double vl_turnrate = TRACKING_NO; // Local calculated robot write turnrate
+  double vl_turnrate = 0; // Local calculated robot write turnrate
   static double robPrevTurnrate = 0.; // Last turnrate before this one
-  static double goalAngle = 0.; // Relative turnrate to goal
+  double goalAngle = 0.; // Relative turnrate to goal
+  double goalDist  = LPMAX; // Relative distance to goal
   timeval curTime; // Current system time
   double curTimeSec = 0.; // Current time in seconds
   double curOrientation = 0.; // Robot current global orientation
   static double lastFound = 0.; // Time when ball was last found
   static double lastBallReq = 0.; // Time when ball was last searched
-  bool newGoalFlag = true;
+  bool newGoalFlag = false;
 
   // Get current time
   gettimeofday(&curTime, 0);
@@ -505,8 +512,7 @@ void trackBall (Robot * robot)
 
   // Current global orientation of robot
   curOrientation = robot->getOrientation();
-  curOrientation -= M_PI; // Normalize to +/- 180 degrees
-  assert( abs(curOrientation) <= M_PI );
+  assert( abs(curOrientation) <= 2*M_PI );
 
   assert( curTimeSec >= lastBallReq );
   // Call driver only once each BALLREQINT
@@ -534,19 +540,26 @@ void trackBall (Robot * robot)
         vl_turnrate = TRACKING_NO; // Robot will do another task
       }
     } else { // A ball has been found
-#ifdef DEBUG_CAM //{{{
-      std::cout << "BALL FOUND at angle/time:\t"
-        << ballInfo->angle << "\t"
-        << curTimeSec << std::endl;
-#endif //}}}
       lastFound = curTimeSec; // Reset found time
       goalAngle = ballInfo->angle;
+      goalDist  = ballInfo->dist;
+      if (goalDist < DIST_TOLERANCE) {
+        robot->setSpeed(0); // stop
+      } else {
+        robot->setSpeed(VEL); // cruise
+      }
       newGoalFlag = true; // Mark as new goal angle
-      // Set the 1st turn direction
-      vl_turnrate = limit(goalAngle,-dtor(TRACK_ROT),dtor(TRACK_ROT));
+#ifdef DEBUG_CAM //{{{
+      std::cout << "BALL FOUND at angle/time:\t"
+        << goalAngle << "\t"
+        << curTimeSec << std::endl;
+#endif //}}}
     }
-  } // else estimate to old goal position
+  } else { // else estimate to old goal position
+    std::cout << "Not yet ball request" << std::endl;
+  }
 
+  // Calculate track turnrate always except when not tracking the goal
   if (vl_turnrate != TRACKING_NO) {
     vl_turnrate = limit(approxTurnrate(curOrientation, goalAngle, &newGoalFlag),
         -dtor(TRACK_ROT), dtor(TRACK_ROT));
