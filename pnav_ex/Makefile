@@ -1,4 +1,5 @@
 # Makefile
+# Sebastian Rockel, 2010-01-15
 # Starts a stage world for localization and navigation
 LOG=FALSE   # Disable logging by default
 					 # To enable set it to 'TRUE'

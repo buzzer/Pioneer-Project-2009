@@ -1,4 +1,7 @@
 #!/bin/sh
+#
+# Sebastian Rockel, 2010-01-15
+#
 DefCSWait=6 # Seconds to wait default for c-space generation
 TamsCSWait=10 # Seconds to wait for tams c-space generation
 DefStageWait=2 # Seconds to wait for Stage world to come up

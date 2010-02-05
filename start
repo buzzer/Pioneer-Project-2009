@@ -1,4 +1,5 @@
 #!/bin/sh
+# Sebastian Rockel, 2010-01-15
 # Eases to start the different player instances
 #
 # @param $1: player cfg file
