@@ -23,8 +23,7 @@
 #include <cmath>
 #include <libplayerc++/playerc++.h>
 #include "wallfollow.h"
-// For timer services
-#include <sys/time.h>
+#include <sys/time.h> // For timer services
 
 #ifdef OPENCV //{{{
 # include "cc_camera1394.h"
@@ -34,27 +33,27 @@
 using namespace PlayerCc;
 
 // {{{ DEBUG COMPILATION FLAGS
-#define DEBUG///< Has to be set if any debug output wanted !!!
-#define DEBUG_STATE///< Output of the robot's internal state
+#define DEBUG_NO///< Has to be set if any debug output wanted !!!
+#define DEBUG_STATE_NO///< Output of the robot's internal state
 #define DEBUG_SONAR_NO///< Output of sonar readings
 #define DEBUG_DIST_NO///< Output of all (fused) ranger readings
-#define DEBUG_POSITION///< Output of the robot's odometry readings
+#define DEBUG_POSITION_NO///< Output of the robot's odometry readings
 #define DEBUG_LASER_NO///< Output of laser readings
-#define DEBUG_CAM///< Output camera debug information
-#define LASER///< Uses sonar + laser if defined
+#define DEBUG_CAM_NO///< Output camera debug information
+#define ENABLE_LASER///< Uses sonar + laser if defined
 //#define OPENCV///< Uses omni vision camera via opencv library(Don't change-> makefile magic!)
 // }}}
 
 // Parameters {{{
-const double VEL       = 0.2;///< Normal_advance_speed in meters per sec.
-const double TURN_RATE = 30; ///< Max wall following turnrate in deg per sec.
+const double VEL       = 0.3;///< Normal_advance_speed in meters per sec.
+const double TURN_RATE = 40; ///< Max wall following turnrate in deg per sec.
                              /// Low values: Smoother trajectory but more
                              /// restricted
-const double STOP_ROT  = 40; ///< Stop rotation speed.
+const double STOP_ROT  = 30; ///< Stop rotation speed.
                              /// Low values increase manauverablility in narrow
                              /// edges, high values let the robot sometimes be
                              /// stuck.
-const double TRACK_ROT =  30; /// Goal tracking rotation speed in degrees per sec.
+const double TRACK_ROT =  40; /// Goal tracking rotation speed in degrees per sec.
 const double YAW_TOLERANCE = 20;///< Yaw tolerance for ball tracking in deg
 const double DIST_TOLERANCE = 0.5;///< Distance tolerance before stopping in meters
 const time_t BALLTIMEOUT = 10;/// Goal tracking time out in seconds.
@@ -86,7 +85,7 @@ const int RMIN  = 0;  /**< RIGHT min angle.      */ const int RMAX  = 65;  ///< 
 class Robot {
 private:
   PlayerClient    *robot;
-#ifdef LASER
+#ifdef ENABLE_LASER
   RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
   //LaserProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
 #endif
@@ -128,7 +127,7 @@ private:
   {
     double minDist         = LPMAX; ///< Min distance in the arc.
     double distCurr        = LPMAX; ///< Current distance of a laser beam
-#ifdef LASER
+#ifdef ENABLE_LASER
     if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=LMAXANGLE || maxAngle>LMAXANGLE ) ) {
 
       const int minBIndex = (int)(minAngle/DEGPROBEAM); ///< Beam index of min deg.
@@ -304,7 +303,7 @@ public:
   Robot(std::string name, int address, int id) {
     robot = new PlayerClient(name, address);
     pp    = new Position2dProxy(robot, id);
-#ifdef LASER
+#ifdef ENABLE_LASER
     lp = new RangerProxy(robot, id);
     //lp    = new LaserProxy(robot, id);
 #endif
@@ -330,6 +329,7 @@ public:
       turnrate = wallfollow(&currentState);
       // Collision avoidance overrides other turnrate if neccessary!
       collisionAvoid(&turnrate, &currentState);
+      trackSpeed = VEL; // Disable track speed
 
     } else {
       // Track the ball
@@ -385,9 +385,7 @@ public:
 #endif  // }}}
   }
   /// Command the motors
-  inline void execute() {
-    std::cout << "SET SPEED/TURN:\t" << speed << "\t" << turnrate << std::endl;
-    pp->SetSpeed(speed, turnrate); }
+  inline void execute() { pp->SetSpeed(speed, turnrate); }
   void go() {
     this->update();
     this->plan();
@@ -474,28 +472,26 @@ double approxTurnrate(double curOrientation, double goalAngle, bool * newGoalFla
     goalYaw = fmod((curOrientation + goalAngle), 2*M_PI);
     oldGoalAngle = goalAngle;
   }
+#ifdef DEBUG_CAM/*{{{*/
   std::cout << "Goal YAW delta:\t" << fabs(curOrientation - goalYaw) << std::endl;
+#endif/*}}}*/
+
   // Normalized absolute goal orientation
   if (fabs(curOrientation - goalYaw) < dtor(YAW_TOLERANCE)){
     approxTurnrate = 0; // Heading to the goal
   } else { // Turning towards goal
     (oldGoalAngle<0) ? (approxTurnrate=-dtor(TRACK_ROT)) : (approxTurnrate=dtor(TRACK_ROT));
   }
-  //if (oldGoalAngle < 0) { // to the right/*{{{*/
-    //approxTurnrate = -dtor(TRACK_ROT);
-  //} else { // to the left
-    //approxTurnrate = dtor(TRACK_ROT);
-  //}/*}}}*/
 
+#ifdef DEBUG_CAM/*{{{*/
   std::cout << "CurPos/GoalPos/Turnrate:\t"
     << rtod(curOrientation) << "\t"
     << rtod(goalYaw) << "\t"
     << rtod(approxTurnrate) << std::endl;
-
+#endif/*}}}*/
   assert( abs(approxTurnrate) <= dtor(TRACK_ROT) );
 
   return approxTurnrate;
-  //return -dtor(10);
 }
 /// Abstraction layer between robot and camera.
 /// Gets goal coordinates from camera device and directs the robot to it
@@ -571,10 +567,10 @@ void trackBall (Robot * robot)
   }
 
   // Calculate track turnrate always except when not tracking the goal
-  //if (vl_turnrate != TRACKING_NO) {
+  if (vl_turnrate != TRACKING_NO) {
     vl_turnrate = limit(approxTurnrate(curOrientation, goalAngle, &newGoalFlag),
         -dtor(TRACK_ROT), dtor(TRACK_ROT));
-  //}
+  }
   robPrevTurnrate = vl_turnrate; // Remember turnrate for next cycle
   // Give the robot a new target, '0' for doing default task
   robot->setTurnrate(vl_turnrate);

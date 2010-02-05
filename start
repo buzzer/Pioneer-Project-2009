@@ -9,6 +9,12 @@ DefStageWait=2 # Seconds to wait for Stage world to come up
 PlaPort=6665 # Player port
 LogPort=6667
 
+killPlayers() {
+  echo "=Now kill remaining player background instances.."
+  killall player # Kill player processes in background
+  sleep 1
+}
+
 if [ $1 = "-h" ] ; then
   echo "\nUsage: `basename $0` [playerconfig] [robotprogram]\n"
   exit 0
@@ -17,6 +23,8 @@ elif [ ! -z $1 ] ; then
 else
   world="uhh"
 fi
+
+killPlayers
 
 player -p $PlaPort $prefix/$world.cfg & # Stage world
 sleep $DefStageWait # Wait for Stage world to come up
@@ -30,5 +38,4 @@ else
   ./wallfollow
 fi
 
-echo "=Now kill remaining player background instances.."
-killall player # Kill player processes in background
+killPlayers
