@@ -49,9 +49,7 @@ class Single1394
       }
       // Get DC1394 node
       fwNodeNum=raw1394_get_nodecount(fwHandle);
-printf("%x   %d nodes\n",fwCamNodes,fwNodeNum);
       fwCamNodes=dc1394_get_camera_nodes(fwHandle,&fwCamNum,1);
-printf("%x:%d",fwCamNodes,fwCamNum);
       if (fwCamNum<1)
       {
         printf("-E- no camera found\n");
@@ -142,7 +140,7 @@ printf("%x:%d",fwCamNodes,fwCamNum);
 
     int captureImage()
     {
-      dc1394_dma_single_capture_poll(&fwCamera);
+      dc1394_dma_single_capture(&fwCamera);
       dc1394_dma_done_with_buffer(&fwCamera);
       memcpy(captureBuf,fwCamera.capture_buffer,imagelen);
       return 1;

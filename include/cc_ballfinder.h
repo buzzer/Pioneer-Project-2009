@@ -2,10 +2,17 @@
 #define _CC_BALLFINDER_H_
 
 //#define _DEBUG
+//#define _IMAGE_TRANS
 
 #include <cxcore.h>
 #include <cv.h>
 #include <highgui.h>
+#include "ml.h"
+
+#ifdef _IMAGE_TRANS
+#include "cc_imageclient.h"
+#endif
+
 
 const double cc_pi=3.14159265;
 
@@ -38,6 +45,11 @@ class BallFinder
 #ifdef _DEBUG
       cvNamedWindow("DEBUG1",CV_WINDOW_AUTOSIZE);
 #endif
+#ifdef _IMAGE_TRANS
+      ic.Init();
+#endif
+      test_data=cvCreateMat(1,2,CV_32FC1);
+      mysvm.load("./include/learning.svm");
       return 0;
     }
 
@@ -132,12 +144,33 @@ class BallFinder
 
 //        cvCircle(srcImage,cvPoint(cx,cy),90,CV_RGB(0,255,255),1); // Inner circle
 //        cvCircle(srcImage,cvPoint(cx,cy),470,CV_RGB(0,255,255),1); // Outer circle
+#ifdef _IMAGE_TRANS
+        IplImage *transImg=cvCreateImage(cvSize(320,240),8,3);;
+        int mx,my;
+        mx=bx-160;
+        my=by-120;
+        if (mx<0) mx=0;
+        if (my<0) my=0;
+        if (mx+320>=srcImage->width) mx=srcImage->width-320;
+        if (my+240>=srcImage->height) my=srcImage->height-240;
+        cvSetImageROI(srcImage,cvRect(mx,my,320,240));
+        cvCvtColor(srcImage,transImg,CV_BGR2RGB);
+        cvResetImageROI(srcImage);
+        ic.sendimage(transImg->imageData,320*240);
+        cvReleaseImage(&transImg);
+#endif
         cvCircle(srcImage,cvPoint(bx,by),br,CV_RGB(255,0,0),3);
         cvLine(srcImage,cvPoint(cx,cy),cvPoint(bx,by),CV_RGB(255,0,0),3);
-        angle=atan2(bx-cx,by-cy);
+        angle=atan2(bx-cx,cy-by);
         //cvEllipse(srcImage,cvPoint(cx,cy),cvSize(20,20),angle/pi*360,270,270-angle/pi*360,CV_RGB(255,0,0),2);
-        bs->angle[0]=-angle;
-        bs->dist[0]=((by-cy)*(by-cy)+(bx-cx)*(bx-cx))*0.00075;
+
+        bs->angle[0]=angle;
+
+        fptr_data=(float *)(test_data->data.ptr+0*test_data->step);
+        *fptr_data=(bx-cx)*(bx-cx)+(by-cy)*(by-cy);
+        *(fptr_data+1)=br;
+        bs->dist[0]=mysvm.predict(test_data);
+        //bs->dist[0]=((by-cy)*(by-cy)+(bx-cx)*(bx-cx))*0.00075;
       }
       else bs->num=0;
       cvShowImage("openCVwindow",srcImage);
@@ -150,6 +183,9 @@ class BallFinder
 #ifdef _DEBUG
       cvDestroyWindow("DEBUG1");
 #endif
+#ifdef _IMAGE_TRANS
+      ic.Over();
+#endif
       cvDestroyWindow("openCVwindow");
       cvReleaseImage(&fltImage);
       cvReleaseImage(&smImage);
@@ -157,6 +193,9 @@ class BallFinder
       cvReleaseImage(&imageCircles);
       cvReleaseImage(&srcImage);
       cvReleaseImage(&imageBlobs);
+
+      cvReleaseMat(&test_data);
+
       return 0;
     }
 
@@ -169,6 +208,9 @@ class BallFinder
   private:
 #ifdef _DEBUG
     IplImage* dbImage;
+#endif
+#ifdef _IMAGE_TRANS
+    ImageClient ic;
 #endif
     int width;
     int height;
@@ -186,6 +228,10 @@ class BallFinder
     int lx[10],ly[10]; // trace of the ball in last 10 points
     int lp; // pointer to current overwrite position in *lx
     int lm; // point num in *lx
+
+    CvMat *test_data; // SVM Test data set
+    float *fptr_data; // SVM data pointer
+    CvSVM mysvm; // SVM needed
 
     void BallTrackRecord(int x,int y)
     {
