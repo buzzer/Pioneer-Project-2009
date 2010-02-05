@@ -7,7 +7,12 @@
 wallfollow.cpp
 Makefile
 start
-#stage_local
+clone
+makedoc
+Doxyfile
+files.txt
+stage_local
 include
-#pnav_ex
-#tams
+pnav_ex
+tams
+tools

@@ -1,10 +1,11 @@
 #!/bin/sh
+# Sebastian Rockel 2010-02-05
 # Create doxygen directory and doxyfy
-doxyhtmldir="./doc/doxygen/html/"
 
-if [ ! -d doc/doxygen/html ]; then
-  mkdir $doxyhtmldir
-fi
+[ -d doc ] || mkdir doc
+[ -d doc/doxygen ] || mkdir doc/doxygen
+[ -d doc/doxygen/html ] || mkdir doc/doxygen/html
+
 cp tools/PioneerShape.png doc/doxygen/html/
 cp tools/AngleDefinition.png doc/doxygen/html/
 doxygen

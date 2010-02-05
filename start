@@ -34,8 +34,4 @@ sleep $DefStageWait # Wait for Stage world to come up
 
 if [ ! -z $2 ] ; then
   ./$2
-else
-  ./wallfollow
 fi
-
-killPlayers

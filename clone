@@ -7,8 +7,8 @@
 #      -a for archiving
 #
 FLIST=files.txt # List of files in repository
-#HOSTTARGET="demo@tams67:projekt090406/"
-HOSTTARGET="8rockel@tams50:projekt090406/"
+HOSTTARGET="demo@tams67:projekt090406/"
+#HOSTTARGET="8rockel@tams50:projekt090406/"
 TMPDIR="PlayerSource"
 ARCHFILE=$TMPDIR".tgz"
 
