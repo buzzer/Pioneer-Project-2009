@@ -403,13 +403,14 @@ public:
   double getOrientation ( void ) { return pp->GetYaw(); }
 }; // Class Robot
 //=================
-#ifndef OPENCV //{{{ Dummy for compilation w/o opencv
-  struct Ball
-  {
-    int num;
-    double* dist;
-    double* angle;
-  };
+#ifndef OPENCV //{{{
+/// Dummy for compilation w/o opencv
+struct Ball
+{
+  int num;
+  double* dist;
+  double* angle;
+};
 #endif //}}}
 // Simulation of the camera's driver call
 const int width=1280; ///< Camera width resolution definition
