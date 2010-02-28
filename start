@@ -29,10 +29,12 @@ killPlayers
 
 player -p $PlaPort $prefix/$world.cfg & # Stage world
 sleep $DefStageWait # Wait for Stage world to come up
+# Start playerv with params when in Stage
+if [ $world = "uhh" ] ; then make view & fi
+
 #player -p $LogPort -q $prefix/writelog.cfg & # Start writelog driver
 #sleep 1
 #playervcr -p $LogPort & # Start logging controller
 
-if [ ! -z $2 ] ; then
-  ./$2
-fi
+# Start the robot program
+if [ ! -z $2 ] ; then ./$2 ; fi
