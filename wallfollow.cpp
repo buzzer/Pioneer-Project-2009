@@ -50,7 +50,7 @@ const double TURN_RATE = 40; ///< Max wall following turnrate in deg per sec.
                              /// Low values: Smoother trajectory but more
                              /// restricted
 const double STOP_ROT  = 30; ///< Stop rotation speed.
-                             /// Low values increase manauverablility in narrow
+                             /// Low values increase maneuverability in narrow
                              /// edges, high values let the robot sometimes be
                              /// stuck.
 const double TRACK_ROT =  40; /// Goal tracking rotation speed in degrees per sec.
@@ -63,10 +63,10 @@ const double WALLFOLLOWDIST = 0.5; ///< Preferred wall following distance in met
 const double STOP_WALLFOLLOWDIST = 0.2; ///< Stop distance in meters.
 const double WALLLOSTDIST  = 1.5; ///< Wall attractor in meters before loosing walls.
 const double SHAPE_DIST = 0.3; ///< Min Radius from sensor for robot shape.
-// Laserranger
+// Laser ranger
 const double LMAXANGLE = 240; ///< Laser max angle in degree
 const int BEAMCOUNT = 2; ///< Number of laser beams taken for one average distance measurement
-const double DEGPROBEAM   = 0.3515625; ///< 360./1024. in degree per laserbeam
+const double DEGPROBEAM   = 0.3515625; ///< 360./1024. in degree per laser beam
 const double LPMAX     = 5.0;  ///< max laser range in meters
 const double COS45     = 0.83867056795; ///< Cos(33);
 const double INV_COS45 = 1.19236329284; ///< 1/COS45
