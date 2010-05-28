@@ -13,6 +13,7 @@ LogPort=6667
 killPlayers() {
   echo "=Now kill remaining player background instances.."
   killall player # Kill player processes in background
+  killall playerv # Kill playerv processes
   sleep 1
 }
 
