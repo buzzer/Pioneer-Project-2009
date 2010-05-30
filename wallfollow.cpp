@@ -15,6 +15,13 @@
 /// @par Sensor fusion
 /// The program depends on sensor fusion of 16 sonar rangers and a 240 degree
 /// urg laser ranger.
+///
+/// (Scalable) Vector Graphic formatted figures :
+/// @image html PioneerShape.svg "Overview about how laser and sonar sensors are fused"
+/// @image html AngleDefinition.svg "Calculating turning angle via the atan function"
+/// @image latex PioneerShape.pdf "Overview about how laser and sonar sensors are fused" width=\textwidth
+/// @image latex AngleDefinition.pdf "Calculating turning angle via the atan function" width=0.8\textwidth
+/// Same graphics in Portable Network Graphic format (html only):
 /// @image html PioneerShape.png "Overview about how laser and sonar sensors are fused"
 /// @image html AngleDefinition.png "Calculating turning angle via the atan function"
 #ifdef DEBUG  // {{{

@@ -695,6 +695,7 @@ EXAMPLE_RECURSIVE      = NO
 # The IMAGE_PATH tag can be used to specify one or more files or 
 # directories that contain image that are included in the documentation (see 
 # the \image command).
+# SRO: Note also 'makedoc' script that copies image files for documentation!
 
 IMAGE_PATH             = 
 

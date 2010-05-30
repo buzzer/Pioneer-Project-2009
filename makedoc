@@ -6,7 +6,12 @@
 [ -d doc/doxygen ] || mkdir doc/doxygen
 [ -d doc/doxygen/html ] || mkdir doc/doxygen/html
 
+# Copy image files to html/latex folder
 cp tools/PioneerShape.png doc/doxygen/html/
 cp tools/AngleDefinition.png doc/doxygen/html/
+cp tools/PioneerShape.svg doc/doxygen/html/
+cp tools/AngleDefinition.svg doc/doxygen/html/
+cp tools/PioneerShape.pdf doc/doxygen/latex/
+cp tools/AngleDefinition.pdf doc/doxygen/latex/
 doxygen
 
