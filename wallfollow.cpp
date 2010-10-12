@@ -11,10 +11,18 @@
 /// @par Description
 /// Wall following example for Pioneer 2DX robot.
 /// This is part of the robotics students project at Uni Hamburg in 2009.
+/// The task was to implement sensor fusion (besides laser and sonar also
+/// omnidirectional camera) to find and track a (pink) ball or when idle do
+/// exploring floor and rooms (via wall following) always avoiding collisions
+/// with static or dynamic obstacles.
 ///
 /// @par Sensor fusion
 /// The program depends on sensor fusion of 16 sonar rangers and a 240 degree
-/// urg laser ranger.
+/// urg laser ranger (as well as an omni directional camera when enabled, see
+/// makefile).
+///
+/// @par Source code
+/// @code git clone git://github.com/buzzer/Pioneer-Project-2009.git @endcode
 ///
 /// (Scalable) Vector Graphic formatted figures :
 /// @image html PioneerShape.svg "Overview about how laser and sonar sensors are fused"
