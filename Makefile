@@ -73,7 +73,7 @@ playerp:
 	./start pioneer wallfollow  # Start the player server on real pioneer
 
 view:
-	playerv -p 6665 --position2d:0 --sonar:0 --ranger:0
+	playerv -p 6665 --position2d:0 --ranger:0 --ranger:1
 
 slam:
 	pmaptest --num_samples 100 --grid_width 16 --grid_height 16 --grid_scale 0.08 --laser_x 0.13 --robot_x -7 --robot_y -7 --robot_rot 90 ${LOGFILE}

@@ -104,7 +104,8 @@ private:
   RangerProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
   //LaserProxy     *lp; ///< New in Player-3.x: hukoyo laser only via ranger IF
 #endif
-  SonarProxy      *sp;
+  //SonarProxy      *sp;
+  RangerProxy     *sp; ///< New in Stage-4.0: only ranger is supported
   Position2dProxy *pp;
   /// Current behaviour of the robot.
   enum StateType {  // {{{
@@ -182,14 +183,14 @@ private:
   {
     // Scan safety areas for walls
     switch (viewDirection) {
-      case LEFT      : return PlayerCc::min(getDistanceLas(LMIN,  LMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(0), sp->GetScan(15))-SHAPE_DIST);
-      case RIGHT     : return PlayerCc::min(getDistanceLas(RMIN,  RMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(7), sp->GetScan(8)) -SHAPE_DIST);
-      case FRONT     : return PlayerCc::min(getDistanceLas(FMIN,  FMAX)            -SHAPE_DIST, PlayerCc::min(sp->GetScan(3), sp->GetScan(4)) -SHAPE_DIST);
-      case RIGHTFRONT: return PlayerCc::min(getDistanceLas(RFMIN, RFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(5), sp->GetScan(6)) -SHAPE_DIST);
-      case LEFTFRONT : return PlayerCc::min(getDistanceLas(LFMIN, LFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetScan(1), sp->GetScan(2)) -SHAPE_DIST);
-      case BACK      : return PlayerCc::min(sp->GetScan(11), sp->GetScan(12))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-      case LEFTREAR  : return PlayerCc::min(sp->GetScan(13), sp->GetScan(14))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-      case RIGHTREAR : return PlayerCc::min(sp->GetScan(9) , sp->GetScan(10))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case LEFT      : return PlayerCc::min(getDistanceLas(LMIN,  LMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(0), sp->GetRange(15))-SHAPE_DIST);
+      case RIGHT     : return PlayerCc::min(getDistanceLas(RMIN,  RMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(7), sp->GetRange(8)) -SHAPE_DIST);
+      case FRONT     : return PlayerCc::min(getDistanceLas(FMIN,  FMAX)            -SHAPE_DIST, PlayerCc::min(sp->GetRange(3), sp->GetRange(4)) -SHAPE_DIST);
+      case RIGHTFRONT: return PlayerCc::min(getDistanceLas(RFMIN, RFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(5), sp->GetRange(6)) -SHAPE_DIST);
+      case LEFTFRONT : return PlayerCc::min(getDistanceLas(LFMIN, LFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(1), sp->GetRange(2)) -SHAPE_DIST);
+      case BACK      : return PlayerCc::min(sp->GetRange(11), sp->GetRange(12))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case LEFTREAR  : return PlayerCc::min(sp->GetRange(13), sp->GetRange(14))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case RIGHTREAR : return PlayerCc::min(sp->GetRange(9) , sp->GetRange(10))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
       case ALL       : return PlayerCc::min(getDistance(LEFT),
                            PlayerCc::min(getDistance(RIGHT),
                              PlayerCc::min(getDistance(FRONT),
@@ -319,10 +320,11 @@ public:
     robot = new PlayerClient(name, address);
     pp    = new Position2dProxy(robot, id);
 #ifdef ENABLE_LASER
-    lp = new RangerProxy(robot, id);
+    lp = new RangerProxy(robot, id+1);
     //lp    = new LaserProxy(robot, id);
 #endif
-    sp    = new SonarProxy(robot, id);
+    //sp    = new SonarProxy(robot, id);
+    sp    = new RangerProxy(robot, id);
     robotID      = id;
     currentState = WALL_FOLLOWING;
     pp->SetMotorEnable(true);
@@ -336,7 +338,7 @@ public:
 #ifdef DEBUG_SONAR  // {{{
     std::cout << std::endl;
     for(int i=0; i< 16; i++)
-      std::cout << "Sonar " << i << ": " << sp->GetScan(i) << std::endl;
+      std::cout << "Sonar " << i << ": " << sp->GetRange(i) << std::endl;
 #endif  // }}}
     if ( trackTurnrate == TRACKING_NO ) { ///< Check if ball is not detected in camera FOV
 
@@ -378,14 +380,14 @@ public:
       << "XXX"                                    << "\t"
       << "XXX"                                    << "\t"
       << "XXX"                                    << std::endl;
-    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << PlayerCc::min(sp->GetScan(15),sp->GetScan(0)) << "\t"
-      << PlayerCc::min(sp->GetScan(1), sp->GetScan(2))              << "\t"
-      << PlayerCc::min(sp->GetScan(3), sp->GetScan(4))              << "\t"
-      << PlayerCc::min(sp->GetScan(5), sp->GetScan(6))              << "\t"
-      << PlayerCc::min(sp->GetScan(7), sp->GetScan(8))              << "\t"
-      << PlayerCc::min(sp->GetScan(9), sp->GetScan(10))-MOUNTOFFSET << "\t"
-      << PlayerCc::min(sp->GetScan(11),sp->GetScan(12))-MOUNTOFFSET << "\t"
-      << PlayerCc::min(sp->GetScan(13),sp->GetScan(14))-MOUNTOFFSET << std::endl;
+    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << PlayerCc::min(sp->GetRange(15),sp->GetRange(0)) << "\t"
+      << PlayerCc::min(sp->GetRange(1), sp->GetRange(2))              << "\t"
+      << PlayerCc::min(sp->GetRange(3), sp->GetRange(4))              << "\t"
+      << PlayerCc::min(sp->GetRange(5), sp->GetRange(6))              << "\t"
+      << PlayerCc::min(sp->GetRange(7), sp->GetRange(8))              << "\t"
+      << PlayerCc::min(sp->GetRange(9), sp->GetRange(10))-MOUNTOFFSET << "\t"
+      << PlayerCc::min(sp->GetRange(11),sp->GetRange(12))-MOUNTOFFSET << "\t"
+      << PlayerCc::min(sp->GetRange(13),sp->GetRange(14))-MOUNTOFFSET << std::endl;
     std::cout << "Shape (l/lf/f/rf/r/rb/b/lb):\t" << getDistance(LEFT) << "\t"
       << getDistance(LEFTFRONT)  << "\t"
       << getDistance(FRONT)      << "\t"
@@ -440,12 +442,11 @@ const int height=960; ///< Camera height resolution definition
 /// @return Pointer to dynamic ball information object.
 ts_Ball * getBallInfo ( void ) {
   static ts_Ball ballInfo;
+#ifdef OPENCV //{{{
   Ball *balls;
 
-#ifdef OPENCV //{{{
   c1394.captureImage();
   balls=fb.DetectBall(c1394.captureBuf);
-#endif //}}}
   if ( balls->num > 0 ) {
      ballInfo.angle = balls->angle[0];
      ballInfo.dist  = balls->dist[0];
@@ -460,6 +461,7 @@ ts_Ball * getBallInfo ( void ) {
   assert( abs(ballInfo.angle) <= M_PI);
   assert( ballInfo.dist >= 0 );
   assert( ballInfo.num >= 0 );
+#endif //}}}
 
   return &ballInfo;
 }
