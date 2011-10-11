@@ -83,6 +83,7 @@ const double LMAXANGLE = 240; ///< Laser max angle in degree
 const int BEAMCOUNT = 2; ///< Number of laser beams taken for one average distance measurement
 const double DEGPROBEAM   = 0.3515625; ///< 360./1024. in degree per laser beam
 const double LPMAX     = 5.0;  ///< max laser range in meters
+const double SONARMAX  = 5.0;  ///< max sonar range in meters
 const double COS45     = 0.83867056795; ///< Cos(33);
 const double INV_COS45 = 1.19236329284; ///< 1/COS45
 const double DIAGOFFSET  = 0.1;  ///< Laser to sonar diagonal offset in meters.
@@ -146,31 +147,70 @@ private:
 #ifdef ENABLE_LASER
     if ( !(minAngle<0 || maxAngle<0 || minAngle>=maxAngle || minAngle>=LMAXANGLE || maxAngle>LMAXANGLE ) ) {
 
-      const int minBIndex = (int)(minAngle/DEGPROBEAM); ///< Beam index of min deg.
-      const int maxBIndex = (int)(maxAngle/DEGPROBEAM); ///< Beam index of max deg.
+      const uint32_t minBIndex = (int)(minAngle/DEGPROBEAM); ///< Beam index of min deg.
+      const uint32_t maxBIndex = (int)(maxAngle/DEGPROBEAM); ///< Beam index of max deg.
       double sumDist     = 0.; ///< Sum of BEAMCOUNT beam's distance.
       double averageDist = LPMAX; ///< Average of BEAMCOUNT beam's distance.
 
-      for (int beamIndex=minBIndex; beamIndex<maxBIndex; beamIndex++) {
-        distCurr = lp->GetRange(beamIndex);
-        distCurr<0.02 ? sumDist+=LPMAX : sumDist+=distCurr;
-        //sumDist += lp->GetRange(beamIndex);
-        if((beamIndex-minBIndex) % BEAMCOUNT == 1) { ///< On each BEAMCOUNT's beam..
-          averageDist = sumDist/BEAMCOUNT; ///< Calculate the average distance.
-          sumDist = 0.; ///< Reset sum of beam average distance
-          // Calculate the minimum distance for the arc
-          averageDist<minDist ? minDist=averageDist : minDist;
-        }
+      if (lp != NULL)
+      {
+        /** Read dynamic ranger data */
+        uint32_t rangerCount = lp->GetRangeCount();
+
+        /** Consistency check for error ranger readings */
+        if (minBIndex<rangerCount && maxBIndex<rangerCount)
+        {
+          for (uint32_t beamIndex=minBIndex; beamIndex<maxBIndex; beamIndex++)
+          {
+            distCurr = lp->GetRange(beamIndex);
+            distCurr<0.02 ? sumDist+=LPMAX : sumDist+=distCurr;
+            //sumDist += lp->GetRange(beamIndex);
+            if((beamIndex-minBIndex) % BEAMCOUNT == 1)
+            { ///< On each BEAMCOUNT's beam..
+              averageDist = sumDist/BEAMCOUNT; ///< Calculate the average distance.
+              sumDist = 0.; ///< Reset sum of beam average distance
+              // Calculate the minimum distance for the arc
+              averageDist<minDist ? minDist=averageDist : minDist;
+            }
 #ifdef DEBUG_LASER // {{{
-        std::cout << "beamInd: " << beamIndex
-          << "\tsumDist: " << sumDist
-          << "\taveDist: " << averageDist
-          << "\tminDist: " << minDist << std::endl;
+            std::cout << "beamInd: " << beamIndex
+              << "\tsumDist: " << sumDist
+              << "\taveDist: " << averageDist
+              << "\tminDist: " << minDist << std::endl;
 #endif // }}}
+          }
+        }
       }
     }
 #endif
   return minDist;
+  }
+
+  /**
+   * If there are less valid range values than SONARCOUNT
+   * than the array contains fake (max) values.
+   * @param index The sonar index
+   * @return The sonar range value.
+   */
+  double getSonar( uint8_t index )
+  {
+    int sonarCount = 0;
+    double reading = 0.0;
+
+    if (sp != NULL)
+    {
+      /** Read recent sonar data */
+      sonarCount  = sp->GetRangeCount();
+    }
+    if (index < sonarCount)
+    {
+      reading = sp->GetRange(index);
+    }
+    else
+    {
+      reading = SONARMAX;
+    }
+    return reading;
   }
 
   /// Returns the minimum distance of the given view direction.
@@ -183,14 +223,14 @@ private:
   {
     // Scan safety areas for walls
     switch (viewDirection) {
-      case LEFT      : return PlayerCc::min(getDistanceLas(LMIN,  LMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(0), sp->GetRange(15))-SHAPE_DIST);
-      case RIGHT     : return PlayerCc::min(getDistanceLas(RMIN,  RMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(7), sp->GetRange(8)) -SHAPE_DIST);
-      case FRONT     : return PlayerCc::min(getDistanceLas(FMIN,  FMAX)            -SHAPE_DIST, PlayerCc::min(sp->GetRange(3), sp->GetRange(4)) -SHAPE_DIST);
-      case RIGHTFRONT: return PlayerCc::min(getDistanceLas(RFMIN, RFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(5), sp->GetRange(6)) -SHAPE_DIST);
-      case LEFTFRONT : return PlayerCc::min(getDistanceLas(LFMIN, LFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(sp->GetRange(1), sp->GetRange(2)) -SHAPE_DIST);
-      case BACK      : return PlayerCc::min(sp->GetRange(11), sp->GetRange(12))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-      case LEFTREAR  : return PlayerCc::min(sp->GetRange(13), sp->GetRange(14))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
-      case RIGHTREAR : return PlayerCc::min(sp->GetRange(9) , sp->GetRange(10))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case LEFT      : return PlayerCc::min(getDistanceLas(LMIN,  LMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(getSonar(0), getSonar(15))-SHAPE_DIST);
+      case RIGHT     : return PlayerCc::min(getDistanceLas(RMIN,  RMAX) -HORZOFFSET-SHAPE_DIST, PlayerCc::min(getSonar(7), getSonar(8)) -SHAPE_DIST);
+      case FRONT     : return PlayerCc::min(getDistanceLas(FMIN,  FMAX)            -SHAPE_DIST, PlayerCc::min(getSonar(3), getSonar(4)) -SHAPE_DIST);
+      case RIGHTFRONT: return PlayerCc::min(getDistanceLas(RFMIN, RFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(getSonar(5), getSonar(6)) -SHAPE_DIST);
+      case LEFTFRONT : return PlayerCc::min(getDistanceLas(LFMIN, LFMAX)-DIAGOFFSET-SHAPE_DIST, PlayerCc::min(getSonar(1), getSonar(2)) -SHAPE_DIST);
+      case BACK      : return PlayerCc::min(getSonar(11), getSonar(12))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case LEFTREAR  : return PlayerCc::min(getSonar(13), getSonar(14))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
+      case RIGHTREAR : return PlayerCc::min(getSonar(9) , getSonar(10))-MOUNTOFFSET-SHAPE_DIST; // Sorry, only sonar at rear
       case ALL       : return PlayerCc::min(getDistance(LEFT),
                            PlayerCc::min(getDistance(RIGHT),
                              PlayerCc::min(getDistance(FRONT),
@@ -338,7 +378,7 @@ public:
 #ifdef DEBUG_SONAR  // {{{
     std::cout << std::endl;
     for(int i=0; i< 16; i++)
-      std::cout << "Sonar " << i << ": " << sp->GetRange(i) << std::endl;
+      std::cout << "Sonar " << i << ": " << getSonar(i) << std::endl;
 #endif  // }}}
     if ( trackTurnrate == TRACKING_NO ) { ///< Check if ball is not detected in camera FOV
 
@@ -380,14 +420,14 @@ public:
       << "XXX"                                    << "\t"
       << "XXX"                                    << "\t"
       << "XXX"                                    << std::endl;
-    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << PlayerCc::min(sp->GetRange(15),sp->GetRange(0)) << "\t"
-      << PlayerCc::min(sp->GetRange(1), sp->GetRange(2))              << "\t"
-      << PlayerCc::min(sp->GetRange(3), sp->GetRange(4))              << "\t"
-      << PlayerCc::min(sp->GetRange(5), sp->GetRange(6))              << "\t"
-      << PlayerCc::min(sp->GetRange(7), sp->GetRange(8))              << "\t"
-      << PlayerCc::min(sp->GetRange(9), sp->GetRange(10))-MOUNTOFFSET << "\t"
-      << PlayerCc::min(sp->GetRange(11),sp->GetRange(12))-MOUNTOFFSET << "\t"
-      << PlayerCc::min(sp->GetRange(13),sp->GetRange(14))-MOUNTOFFSET << std::endl;
+    std::cout << "Sonar (l/lf/f/rf/r/rb/b/lb):\t" << PlayerCc::min(getSonar(15),getSonar(0)) << "\t"
+      << PlayerCc::min(getSonar(1), getSonar(2))              << "\t"
+      << PlayerCc::min(getSonar(3), getSonar(4))              << "\t"
+      << PlayerCc::min(getSonar(5), getSonar(6))              << "\t"
+      << PlayerCc::min(getSonar(7), getSonar(8))              << "\t"
+      << PlayerCc::min(getSonar(9), getSonar(10))-MOUNTOFFSET << "\t"
+      << PlayerCc::min(getSonar(11),getSonar(12))-MOUNTOFFSET << "\t"
+      << PlayerCc::min(getSonar(13),getSonar(14))-MOUNTOFFSET << std::endl;
     std::cout << "Shape (l/lf/f/rf/r/rb/b/lb):\t" << getDistance(LEFT) << "\t"
       << getDistance(LEFTFRONT)  << "\t"
       << getDistance(FRONT)      << "\t"
